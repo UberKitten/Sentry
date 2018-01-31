@@ -23,6 +23,9 @@ namespace Sentry
         [Option(Default = true, HelpText = "Whether to check for other Sentries when attempting to run an action.")]
         public bool CheckQuorum { get; set; }
 
+        [Option(Default = false, HelpText = "Whether to skip the Verify step after loading services.")]
+        public bool SkipVerify { get; set; }
+
         // Modify the below settings at your own risk!
 
         [Option(Default = 1.25, Hidden = true, HelpText = "Multiplied by LoopDelay to determine the minimum time to wait before assuming quorum success.")]

@@ -27,6 +27,7 @@ namespace Sentry
          * Called upon startup to verify that configuration is correct
          * For example: Check that all parameters are specified,
          * check that login credentials work, etc
+         * Any errors should be thrown as exceptions
          */ 
         public virtual void Verify()
         {
