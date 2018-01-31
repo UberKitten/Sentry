@@ -6,8 +6,9 @@ using System.Runtime.Serialization;
 using System.Linq.Expressions;
 using System.Linq;
 using System.Text;
+using System.ComponentModel;
 
-namespace Sentry
+namespace Sentry.Config
 {
     class Config
     {
@@ -24,7 +25,7 @@ namespace Sentry
                 {
                     new Trigger
                     {
-                        TriggerString = "pineapple",
+                        TriggerStrings = "pineapple",
                         Check = new List<string>
                         {
                             "publictwitter"
@@ -84,7 +85,7 @@ namespace Sentry
 
     class Trigger
     {
-        public string TriggerString { get; set; }
+        public string TriggerStrings { get; set; }
         public List<string> Check { get; set; }
         public List<TriggerAction> Services { get; set; }
     }
@@ -106,6 +107,10 @@ namespace Sentry
         // Matches up with TriggerAction above
         // Allows e.g. multiple Twitter accounts with different credentials
         public string Id { get; set; }
+
+        [DefaultValue(true)]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        public bool CheckQuorum { get; set; }
         
         public Dictionary<string, string> Options { get; set; }
     }
