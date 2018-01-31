@@ -1,0 +1,48 @@
+{
+  "Guid": "023c5426-8948-41c9-824d-f7e9132813ce",
+  "Triggers": [
+    {
+      "TriggerString": "pineapple",
+      "Check": [
+        "publictwitter"
+      ],
+      "Services": [
+        {
+          "Id": "publictwitter",
+          "Actions": [
+            "lock"
+          ]
+        },
+        {
+          "Id": "sinfultwitter",
+          "Actions": [
+            "scorch",
+            "delete"
+          ]
+        }
+      ]
+    }
+  ],
+  "Services": [
+    {
+      "Type": "twitter",
+      "Id": "publictwitter",
+      "Options": {
+        "ConsumerKey": "example",
+        "ConsumerSecret": "example",
+        "Token": "example",
+        "TokenSecret": "example"
+      }
+    },
+    {
+      "Type": "twitter",
+      "Id": "sinfultwitter",
+      "Options": {
+        "ConsumerKey": "example",
+        "ConsumerSecret": "example",
+        "Token": "example",
+        "TokenSecret": "example"
+      }
+    }
+  ]
+}
