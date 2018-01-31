@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
+using System.IO;
 
 namespace Sentry
 {
@@ -6,7 +8,9 @@ namespace Sentry
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var config = Config.GetExample();
+            var json = JsonConvert.SerializeObject(config, Formatting.Indented);
+            File.WriteAllText("config.json", json);
         }
     }
 }
