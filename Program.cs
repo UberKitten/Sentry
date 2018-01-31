@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using NLog;
 using System;
 using System.IO;
+using Sentry.Config;
 
 namespace Sentry
 {
@@ -23,7 +24,7 @@ namespace Sentry
         {
             logger.Info("Generating example config file {0}", options.ConfigFile);
 
-            var config = Config.GetExample();
+            var config = Config.Config.GetExample();
 
             var json = JsonConvert.SerializeObject(config, Formatting.Indented);
             logger.Trace("Example JSON:");
