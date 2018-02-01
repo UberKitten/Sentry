@@ -9,6 +9,9 @@ namespace Sentry
     {
         [Option('c', Default = "config.json", HelpText = "Configuration file in JSON format to use.")]
         public string ConfigFile { get; set; }
+
+        [Option('j', Default = null, HelpText = "Configuration string in JSON format to use.")]
+        public string ConfigText { get; set; }
     }
 
     [Verb("run", HelpText = "Normal Sentry operation mode")]
@@ -25,6 +28,12 @@ namespace Sentry
 
         [Option(Default = false, HelpText = "Whether to skip the Verify step after loading services.")]
         public bool SkipVerify { get; set; }
+
+        [Option(Default = false, HelpText = "Skip triggers checks and proceeds straight to performing all actions.")]
+        public bool JustFuckMyShitUpFam { get; set; }
+
+        [Option(Default = false, HelpText = "Bypass confirmation prompt before proceeding in JFMSUF mode.")]
+        public bool BypassJFMSUFConfirmation { get; set; }
 
         // Modify the below settings at your own risk!
 
