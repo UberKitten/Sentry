@@ -47,17 +47,17 @@ namespace Sentry
         /**
          * Called after an action is triggered when attempting to determine if this node should act
          * Service must check if another node has posted a quorum message (within reasonable timeframe/number of messages)
-         * If other nodes have posted, return false. Else return true
+         * If other nodes have posted, return true
          * Service MUST ignore quorum messages from this node, check using GUID
          * How exactly to determine a quorum message from a normal message is up to the service
          * For example, something as simple as: "quorum check: {guid}" in a post will work
          * Services that can't implement the quorum message functions feasibly should not implement them
          * If any errors occur, an exception must be thrown
          */
-        public virtual bool CheckQuorumMessage(string guid)
+        public virtual bool QuorumMessageExists(string guid)
         {
             logger.Debug("CheckQuorumMessage not implemented, skipping check");
-            return true;
+            return false;
         }
 
         /**
@@ -89,6 +89,7 @@ namespace Sentry
          * Multiple actions can be requested, e.g. "lock" "scorch" "delete"
          * Service must determine appropriate order (if any)
          * Recommend starting with least destructive first
+         * For example: You would want your Twitter account to be locked, THEN start deleting tweets, rather than vice versa
          * Service must ensure that regardless of specified order, actions should complete (if allowed)
          * IF order of operations is so important that a failure of an action should cause other actions to halt
          * then those actions should be specified as one
