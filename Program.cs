@@ -7,23 +7,37 @@ using Sentry.Config;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+using System.Threading;
+using System.Diagnostics;
 
 namespace Sentry
 {
     class Program
     {
-        private static Logger logger = LogManager.GetLogger("Sentry");
+        private Logger logger = LogManager.GetLogger("Sentry");
+        protected CancellationTokenSource cancellationToken = new CancellationTokenSource();
+        protected Dictionary<string, BaseService> services = new Dictionary<string, BaseService>();
+        protected Thread loopThread = null;
 
         static void Main(string[] args)
         {
+            var program = new Program();
+
+            var exitEvent = new ManualResetEvent(false);
+            Console.CancelKeyPress += (sender, eventArgs) => {
+                eventArgs.Cancel = true;
+                exitEvent.Set();
+            };
 
             var options = Parser.Default.ParseArguments<RunOptions, ExampleConfigOptions>(args)
-                .WithParsed<RunOptions>(opts => Run(opts))
-                .WithParsed<ExampleConfigOptions>(opts => ExampleConfig(opts));
-            
+                .WithParsed<RunOptions>(opts => program.Run(opts))
+                .WithParsed<ExampleConfigOptions>(opts => program.ExampleConfig(opts));
+
+            // Wait here for loop to complete
+            exitEvent.WaitOne();
         }
 
-        private static void ExampleConfig(ExampleConfigOptions options)
+        public void ExampleConfig(ExampleConfigOptions options)
         {
             logger.Info("Generating example config file {0}", options.ConfigFile);
 
@@ -51,24 +65,38 @@ namespace Sentry
             }
         }
 
-        private static void Run(RunOptions options)
+        protected Config.Config GetConfig(Options options)
         {
-            string json;
-            try
+            if (!String.IsNullOrEmpty(options.ConfigText) && !String.IsNullOrEmpty(options.ConfigFile))
             {
-                json = File.ReadAllText(options.ConfigFile);
-            }
-            catch (FileNotFoundException ex)
-            {
-                logger.Error("Config file {0} not found", ex.FileName);
-                logger.Error("Please run Sentry.exe makeconfig to generate an example {0}", options.ConfigFile);
-                return;
+                logger.Fatal("Only one config option must be specified");
+                throw new ArgumentException();
             }
 
-            logger.Trace("Config file read:");
+            string json = options.ConfigText;
+
+            if (!String.IsNullOrEmpty(options.ConfigFile))
+            {
+                try
+                {
+                    json = File.ReadAllText(options.ConfigFile);
+                }
+                catch (FileNotFoundException ex)
+                {
+                    logger.Fatal("Config file {0} not found", ex.FileName);
+                    logger.Fatal("Please run Sentry.exe makeconfig to generate an example {0}", options.ConfigFile);
+                    throw ex;
+                }
+            }
+            logger.Trace("Configuration read:");
             logger.Trace(json);
 
-            var config = JsonConvert.DeserializeObject<Config.Config>(json);
+            return JsonConvert.DeserializeObject<Config.Config>(json);
+        }
+
+        public void Run(RunOptions options)
+        {
+            var config = GetConfig(options);
             logger.Info("Loaded {0} with {1} triggers and {2} services", options.ConfigFile, config.Triggers.Count, config.Services.Count);
 
             // Build list of Services
@@ -82,7 +110,6 @@ namespace Sentry
             }
             logger.Debug("Loaded {0} service types", serviceTypes.Count);
 
-            var services = new Dictionary<string, BaseService>();
             foreach (var serviceConfig in config.Services)
             {
                 var serviceType = serviceTypes.SingleOrDefault(t => t.Name.Equals(serviceConfig.Type, StringComparison.InvariantCultureIgnoreCase));
@@ -129,7 +156,25 @@ namespace Sentry
                 }
             }
 
-            // TODO: Main loop
+            // Start loop
+            Loop(options);
+        }
+
+        protected void Loop(RunOptions options)
+        {
+            logger.Info("Starting main loop");
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                // Start counting how long it's taken to run checks
+                // So we can check each service roughly every 10 minutes instead of every 10 minutes + time spent checking
+                var timeElapsed = new Stopwatch();
+                timeElapsed.Start();
+
+
+
+                timeElapsed.Stop();
+                logger.Debug("Time taken in loop: {0} ms", timeElapsed.ElapsedMilliseconds);
+            }
         }
     }
 }
