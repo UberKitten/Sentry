@@ -174,6 +174,16 @@ namespace Sentry
 
                 timeElapsed.Stop();
                 logger.Debug("Time taken in loop: {0} ms", timeElapsed.ElapsedMilliseconds);
+
+                // Time left to wait in milliseconds (can be negative)
+                var timeLeft = options.LoopDelay * 1000 - timeElapsed.ElapsedMilliseconds;
+                logger.Trace("Time left to wait: {0} ms", timeLeft);
+
+                if (timeLeft > 0)
+                {
+                    logger.Trace("Sleeping");
+                    Thread.Sleep(Convert.ToInt32(timeLeft));
+                }
             }
         }
     }
