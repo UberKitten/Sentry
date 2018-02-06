@@ -148,6 +148,7 @@ namespace Sentry
             }
             else
             {
+                var servicesToRemove = new List<string>();
                 foreach (var service in services)
                 {
                     logger.Debug("Verifying {0}", service.Key);
@@ -159,8 +160,12 @@ namespace Sentry
                     catch (Exception ex)
                     {
                         logger.Error(ex, "Error verifying {0}, removing", service.Key);
-                        services.Remove(service.Key);
+                        servicesToRemove.Add(service.Key);
                     }
+                }
+                foreach (var serviceToRemove in servicesToRemove)
+                {
+                    services.Remove(serviceToRemove);
                 }
             }
 
@@ -323,46 +328,54 @@ namespace Sentry
                                 logger.Debug("Checking {0} for trigger word {1}", checkId, triggerString);
 
                                 // Pull relevant service to check
-                                var serviceToCheck = services[checkId.ToLowerInvariant()];
-                                logger.Trace("Pulled service to check {0}", serviceToCheck.GetType());
-
-                                // Avoid calling Check if a service is currently doing an Action in another thread
-                                // Simplifies service code to not require thread safety, does reduce concurrency though
-                                // I.e. a service can not be used for checking and acting at the same time (even different triggers)
-                                // The check will wait until the service is done acting
-                                if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
+                                if (services.ContainsKey(checkId.ToLowerInvariant()))
                                 {
-                                    logger.Info("Skipping check for {0} because actions are currently running", checkId);
+
+                                    var serviceToCheck = services[checkId.ToLowerInvariant()];
+                                    logger.Trace("Pulled service to check {0}", serviceToCheck.GetType());
+
+                                    // Avoid calling Check if a service is currently doing an Action in another thread
+                                    // Simplifies service code to not require thread safety, does reduce concurrency though
+                                    // I.e. a service can not be used for checking and acting at the same time (even different triggers)
+                                    // The check will wait until the service is done acting
+                                    if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
+                                    {
+                                        logger.Info("Skipping check for {0} because actions are currently running", checkId);
+                                    }
+                                    else
+                                    {
+                                        try
+                                        {
+                                            if (serviceToCheck.Check(triggerString))
+                                            {
+                                                logger.Info("Trigger string {0} detected for service {1}", triggerString, checkId);
+
+                                                // Loop through actions and start
+                                                foreach (var action in trigger.Services)
+                                                {
+                                                    var actionsAggregated = action.Actions.Aggregate((sum, addition) => sum + ", " + addition);
+                                                    logger.Info("Running actions {0} on service {1}", actionsAggregated, action.Id);
+
+                                                    var serviceToAct = services[action.Id.ToLowerInvariant()];
+                                                    logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
+
+                                                    var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
+                                                    actionThreads.Add(checkId, actionThread);
+                                                    actionThread.Start();
+
+                                                    TraceActionThreads();
+                                                }
+                                            }
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            logger.Error(ex, "Error while checking {0} for trigger string {1}", checkId, triggerString);
+                                        }
+                                    }
                                 }
                                 else
                                 {
-                                    try
-                                    {
-                                        if (serviceToCheck.Check(triggerString))
-                                        {
-                                            logger.Info("Trigger string {0} detected for service {1}", triggerString, checkId);
-
-                                            // Loop through actions and start
-                                            foreach (var action in trigger.Services)
-                                            {
-                                                var actionsAggregated = action.Actions.Aggregate((sum, addition) => sum + ", " + addition);
-                                                logger.Info("Running actions {0} on service {1}", actionsAggregated, action.Id);
-
-                                                var serviceToAct = services[action.Id.ToLowerInvariant()];
-                                                logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
-
-                                                var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
-                                                actionThreads.Add(checkId, actionThread);
-                                                actionThread.Start();
-
-                                                TraceActionThreads();
-                                            }
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        logger.Error(ex, "Error while checking {0} for trigger string {1}", checkId, triggerString);
-                                    }
+                                    logger.Error("Missing service {0}, did it fail verification?", checkId);
                                 }
                             }
                         }
