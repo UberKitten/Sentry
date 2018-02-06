@@ -1,8 +1,10 @@
 {
-  "Guid": "023c5426-8948-41c9-824d-f7e9132813ce",
+  "Guid": "722c84af-07bf-4f4d-a788-1fb5c3487ca6",
   "Triggers": [
     {
-      "TriggerString": "pineapple",
+      "TriggerStrings": [
+        "pineapple"
+      ],
       "Check": [
         "publictwitter"
       ],
@@ -27,6 +29,7 @@
     {
       "Type": "twitter",
       "Id": "publictwitter",
+      "CheckQuorum": false,
       "Options": {
         "ConsumerKey": "example",
         "ConsumerSecret": "example",
@@ -37,6 +40,7 @@
     {
       "Type": "twitter",
       "Id": "sinfultwitter",
+      "CheckQuorum": false,
       "Options": {
         "ConsumerKey": "example",
         "ConsumerSecret": "example",
