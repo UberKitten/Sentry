@@ -16,6 +16,9 @@ namespace Sentry
          * Services are recommended to cache session data in instance variables
          * For example, keep a session cookie and continue using it until invalid
          * Instances are kept alive between checks
+         * Services are responsible for handling their own errors and health
+         * If the state of the service means it cannot continue, it should reset its own state if possible
+         * (The main class will not destroy and recreate it)
          */ 
         public BaseService(ServiceConfig config)
         {
