@@ -26,6 +26,19 @@ namespace Sentry
             this.logger = LogManager.GetLogger(config.Id);
         }
 
+        protected T InitializeOptions<T>()
+        {
+            var options = Activator.CreateInstance<T>();
+            foreach (var property in options.GetType().GetProperties())
+            {
+                if (Config.Options.ContainsKey(property.Name))
+                {
+                    property.SetValue(options, Config.Options[property.Name]);
+                }
+            }
+            return options;
+        }
+
         /**
          * Called upon startup to verify that configuration is correct
          * For example: Check that all parameters are specified,
@@ -43,6 +56,23 @@ namespace Sentry
          * Comparison must be case-sensitive by default
          */
         public virtual bool Check(string triggerString)
+        {
+            throw new NotImplementedException();
+        }
+
+        /**
+         * Called when a trigger is detected
+         * Multiple actions can be requested, e.g. "lock" "scorch" "delete"
+         * Service must determine appropriate order (if any)
+         * Recommend starting with least destructive first
+         * For example: You would want your Twitter account to be locked, THEN start deleting tweets, rather than vice versa
+         * Service must ensure that regardless of specified order, actions should complete (if allowed)
+         * IF order of operations is so important that a failure of an action should cause other actions to halt
+         * then those actions should be specified as one
+         * For example, on reddit one must edit/delete old comments before deleting the account or else comments will be stuck
+         * This should be called "scorchdelete" instead of having "scorch" and "delete" separately
+         */
+        public virtual void Action(List<string> actions)
         {
             throw new NotImplementedException();
         }
@@ -87,21 +117,7 @@ namespace Sentry
             logger.Debug("DeleteQuorumMessage not implemented, skipping delete");
         }
 
-        /**
-         * Called when a trigger is detected
-         * Multiple actions can be requested, e.g. "lock" "scorch" "delete"
-         * Service must determine appropriate order (if any)
-         * Recommend starting with least destructive first
-         * For example: You would want your Twitter account to be locked, THEN start deleting tweets, rather than vice versa
-         * Service must ensure that regardless of specified order, actions should complete (if allowed)
-         * IF order of operations is so important that a failure of an action should cause other actions to halt
-         * then those actions should be specified as one
-         * For example, on reddit one must edit/delete old comments before deleting the account or else comments will be stuck
-         * This should be called "scorchdelete" instead of having "scorch" and "delete" separately
-         */
-        public virtual void Action(List<string> actions)
-        {
-            throw new NotImplementedException();
-        }
+        public class UnableToVerifyException : Exception { }
+        public class UnableToCheckException : Exception { }
     }
 }
