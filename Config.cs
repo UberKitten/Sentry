@@ -25,7 +25,10 @@ namespace Sentry.Config
                 {
                     new Trigger
                     {
-                        TriggerStrings = "pineapple",
+                        TriggerStrings = new List<string>
+                        {
+                            "pineapple",
+                        },
                         Check = new List<string>
                         {
                             "publictwitter"
@@ -85,7 +88,7 @@ namespace Sentry.Config
 
     class Trigger
     {
-        public string TriggerStrings { get; set; }
+        public List<string> TriggerStrings { get; set; }
         public List<string> Check { get; set; }
         public List<TriggerAction> Services { get; set; }
     }
@@ -102,10 +105,12 @@ namespace Sentry.Config
         // The two required parameters for each service
 
         // What needs to run, e.g. Twitter, Facebook, email, etc
+        [JsonRequired]
         public string Type { get; set; }
 
         // Matches up with TriggerAction above
         // Allows e.g. multiple Twitter accounts with different credentials
+        [JsonRequired]
         public string Id { get; set; }
 
         [DefaultValue(true)]

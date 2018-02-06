@@ -29,13 +29,16 @@ namespace Sentry
         [Option(Default = false, HelpText = "Whether to skip the Verify step after loading services.")]
         public bool SkipVerify { get; set; }
 
-        [Option(Default = false, HelpText = "Skip triggers checks and proceeds straight to performing all actions.")]
+        [Option(Default = false, HelpText = "Skip trigger checks and proceeds straight to performing all actions.")]
         public bool JustFuckMyShitUpFam { get; set; }
 
-        [Option(Default = false, HelpText = "Bypass confirmation prompt before proceeding in JFMSUF mode.")]
-        public bool BypassJFMSUFConfirmation { get; set; }
+        [Option(Default = 5, Hidden = true, HelpText = "How long, in seconds, to wait when attempting to launch actions.")]
+        public int JFMSUFLoopDelay { get; set; }
 
         // Modify the below settings at your own risk!
+        
+        [Option(Default = false, Hidden = true, HelpText = "Skip confirmation prompt before proceeding in JFMSUF mode.")]
+        public bool SkipJFMSUFConfirmation { get; set; }
 
         [Option(Default = 1.25, Hidden = true, HelpText = "Multiplied by LoopDelay to determine the minimum time to wait before assuming quorum success.")]
         public double QuorumCheckDelayMultiplier { get; set; }
