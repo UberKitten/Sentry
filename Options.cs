@@ -29,6 +29,9 @@ namespace Sentry
         [Option(Default = false, HelpText = "Whether to skip the Verify step after loading services.")]
         public bool SkipVerify { get; set; }
 
+        [Option(Default = 864000, HelpText = "How long after, in seconds, to wait after a trigger activates before checking again.")]
+        public int Cooldown { get; set; }
+
         [Option(Default = false, HelpText = "Skip trigger checks and proceeds straight to performing all actions.")]
         public bool JustFuckMyShitUpFam { get; set; }
 
