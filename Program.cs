@@ -21,6 +21,7 @@ namespace Sentry
         protected Thread loopThread = null;
 
         protected Dictionary<string, Thread> actionThreads = new Dictionary<string, Thread>();
+        protected Dictionary<int, DateTime> lastActions = new Dictionary<int, DateTime>();
         protected Config.Config config = null;
 
         static void Main(string[] args)
@@ -330,59 +331,68 @@ namespace Sentry
 
                         foreach (var triggerString in trigger.TriggerStrings)
                         {
+                            // If it's not in lastActions, no action has ever been run
+                            if (lastActions.TryGetValue(i, out DateTime lastAction))
+                            {
+                                var secondsSince = (DateTime.UtcNow - lastAction).Seconds;
+                                if (secondsSince < options.Cooldown)
+                                {
+                                    logger.Debug("Skipping check for trigger index {0} as it has only been {1} seconds since last trigger", i, secondsSince);
+                                    continue;
+                                }
+                            }
+
                             foreach (var checkId in trigger.Check)
                             {
                                 logger.Debug("Checking {0} for trigger word {1}", checkId, triggerString);
 
                                 // Pull relevant service to check
-                                if (services.ContainsKey(checkId.ToLowerInvariant()))
+                                if (!services.ContainsKey(checkId.ToLowerInvariant()))
                                 {
+                                    logger.Error("Missing service {0}, did it fail verification?", checkId);
+                                    continue;
+                                }
 
-                                    var serviceToCheck = services[checkId.ToLowerInvariant()];
-                                    logger.Trace("Pulled service to check {0}", serviceToCheck.GetType());
+                                var serviceToCheck = services[checkId.ToLowerInvariant()];
+                                logger.Trace("Pulled service to check {0}", serviceToCheck.GetType());
 
-                                    // Avoid calling Check if a service is currently doing an Action in another thread
-                                    // Simplifies service code to not require thread safety, does reduce concurrency though
-                                    // I.e. a service can not be used for checking and acting at the same time (even different triggers)
-                                    // The check will wait until the service is done acting
-                                    if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
+                                // Avoid calling Check if a service is currently doing an Action in another thread
+                                // Simplifies service code to not require thread safety, does reduce concurrency though
+                                // I.e. a service can not be used for checking and acting at the same time (even different triggers)
+                                // The check will wait until the service is done acting
+                                if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
+                                {
+                                    logger.Info("Skipping check for {0} because actions are currently running", checkId);
+                                    continue;
+                                }
+
+                                try
+                                {
+                                    if (serviceToCheck.Check(triggerString))
                                     {
-                                        logger.Info("Skipping check for {0} because actions are currently running", checkId);
-                                    }
-                                    else
-                                    {
-                                        try
+                                        logger.Info("Trigger string {0} detected for service {1}", triggerString, checkId);
+                                        lastActions.Add(i, DateTime.UtcNow);
+
+                                        // Loop through actions and start
+                                        foreach (var action in trigger.Services)
                                         {
-                                            if (serviceToCheck.Check(triggerString))
-                                            {
-                                                logger.Info("Trigger string {0} detected for service {1}", triggerString, checkId);
+                                            var actionsAggregated = action.Actions.Aggregate((sum, addition) => sum + ", " + addition);
+                                            logger.Info("Running actions {0} on service {1}", actionsAggregated, action.Id);
 
-                                                // Loop through actions and start
-                                                foreach (var action in trigger.Services)
-                                                {
-                                                    var actionsAggregated = action.Actions.Aggregate((sum, addition) => sum + ", " + addition);
-                                                    logger.Info("Running actions {0} on service {1}", actionsAggregated, action.Id);
+                                            var serviceToAct = services[action.Id.ToLowerInvariant()];
+                                            logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
 
-                                                    var serviceToAct = services[action.Id.ToLowerInvariant()];
-                                                    logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
+                                            var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
+                                            actionThreads.Add(action.Id, actionThread);
+                                            actionThread.Start();
 
-                                                    var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
-                                                    actionThreads.Add(checkId, actionThread);
-                                                    actionThread.Start();
-
-                                                    TraceActionThreads();
-                                                }
-                                            }
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            logger.Error(ex, "Error while checking {0} for trigger string {1}", checkId, triggerString);
+                                            TraceActionThreads();
                                         }
                                     }
                                 }
-                                else
+                                catch (Exception ex)
                                 {
-                                    logger.Error("Missing service {0}, did it fail verification?", checkId);
+                                    logger.Error(ex, "Error while checking {0} for trigger string {1}", checkId, triggerString);
                                 }
                             }
                         }
