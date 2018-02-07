@@ -260,18 +260,25 @@ namespace Sentry
                     {
                         logger.Info("Starting action for {0}, actions {1}", action.Id, actionsAggregated);
 
-                        var serviceToAct = services[action.Id.ToLowerInvariant()];
-                        logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
+                        if (services.ContainsKey(action.Id))
+                        {
+                            var serviceToAct = services[action.Id.ToLowerInvariant()];
+                            logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
 
-                        var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
-                        actionThreads.Add(action.Id, actionThread);
-                        actionThread.Start();
+                            var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
+                            actionThreads.Add(action.Id, actionThread);
+                            actionThread.Start();
 
-                        // Remove from list of triggerConfigs to work on so we don't keep trying to start it
-                        // We use triggerConfigsToRemove because we're currently enumerating
-                        triggerConfigsToRemove.Add(action);
+                            // Remove from list of triggerConfigs to work on so we don't keep trying to start it
+                            // We use triggerConfigsToRemove because we're currently enumerating
+                            triggerConfigsToRemove.Add(action);
 
-                        TraceActionThreads();
+                            TraceActionThreads();
+                        }
+                        else
+                        {
+                            logger.Error("Unable to find service {0}, did it fail verification?", action.Id);
+                        }
                     }
                     else
                     {
