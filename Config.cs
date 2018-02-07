@@ -60,7 +60,7 @@ namespace Sentry.Config
                     new ServiceConfig
                     {
                         Id = "publictwitter",
-                        Type = "twitter",
+                        Type = "twitterapi",
                         Options = new Dictionary<string, string>
                         {
                             ["ConsumerKey"] = "example",
@@ -72,7 +72,7 @@ namespace Sentry.Config
                     new ServiceConfig
                     {
                         Id = "sinfultwitter",
-                        Type = "twitter",
+                        Type = "twitterapi",
                         Options = new Dictionary<string, string>
                         {
                             ["ConsumerKey"] = "example",
