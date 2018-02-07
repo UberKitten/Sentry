@@ -7,7 +7,7 @@ using Sentry.Config;
 
 namespace Sentry.Services
 {
-    class Twitter : BaseService
+    class TwitterApi : BaseService
     {
         protected class ServiceOptions {
             public string ConsumerKey { get; set; }
@@ -21,7 +21,7 @@ namespace Sentry.Services
         protected RestClient client = new RestClient("https://api.twitter.com/");
         protected long user_id = -1;
 
-        public Twitter(ServiceConfig config) : base(config)
+        public TwitterApi(ServiceConfig config) : base(config)
         {
             Options = InitializeOptions<ServiceOptions>();
             client.Authenticator = OAuth1Authenticator.ForProtectedResource(Options.ConsumerKey, Options.ConsumerSecret, Options.Token, Options.TokenSecret);
