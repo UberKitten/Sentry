@@ -401,6 +401,23 @@ namespace Sentry
                     }
 
                     TraceActionThreads();
+                    if (actionThreads.Count > 0)
+                    {
+                        // Prevent memory leaks by unused threads still being referenced
+
+                        logger.Debug("Attempting to clean up ActionThreads");
+                        var actionThreadsToRemove = new List<string>();
+                        
+                        foreach (var actionThread in actionThreads)
+                        {
+                            if (!actionThread.Value.IsAlive)
+                            {
+                                logger.Trace("Removing ActionThread {0}", actionThread.Key);
+                                actionThreadsToRemove.Add(actionThread.Key);
+                            }
+                        }
+                        actionThreadsToRemove.ForEach(key => actionThreads.Remove(key));
+                    }
 
                     timeElapsed.Stop();
                     logger.Debug("Time taken in loop: {0} ms", timeElapsed.ElapsedMilliseconds);
