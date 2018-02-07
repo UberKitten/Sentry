@@ -10,9 +10,14 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="NLog" Version="4.5.0-rc04" />
     <PackageReference Include="RestSharp" Version="106.3.0-alpha0002" />
+    <PackageReference Include="Selenium.Support" Version="3.9.0" />
+    <PackageReference Include="Selenium.WebDriver" Version="3.9.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="nlog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
