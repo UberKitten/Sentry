@@ -116,21 +116,5 @@ namespace Sentry.Services
                 }
             }
         }
-
-        public override void DeleteQuorumMessage(string guid)
-        {
-            base.DeleteQuorumMessage(guid);
-        }
-
-        public override void PostQuorumMessage(string guid)
-        {
-            base.PostQuorumMessage(guid);
-        }
-
-        public override bool QuorumMessageExists(string guid)
-        {
-            return base.QuorumMessageExists(guid);
-        }
-
     }
 }
