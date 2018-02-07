@@ -102,7 +102,7 @@ namespace Sentry.Services
             {
                 if (tweet.text.Value.Contains(triggerString))
                 {
-                    logger.Debug("Found trigger string in text: {0}", tweet.Text);
+                    logger.Debug("Found trigger string in text: {0}", tweet.text);
                     return true;
                 }
             }
