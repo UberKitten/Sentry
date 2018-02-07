@@ -3,6 +3,7 @@ using Sentry.Config;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace Sentry
 {
@@ -28,14 +29,24 @@ namespace Sentry
 
         protected T InitializeOptions<T>()
         {
+            var leftoverConfigElements = new Dictionary<string, string>(Config.Options);
+
             var options = Activator.CreateInstance<T>();
             foreach (var property in options.GetType().GetProperties())
             {
                 if (Config.Options.ContainsKey(property.Name))
                 {
                     property.SetValue(options, Config.Options[property.Name]);
+                    leftoverConfigElements.Remove(property.Name);
                 }
             }
+
+            if (leftoverConfigElements.Count > 0)
+            {
+                var combinedKeys = leftoverConfigElements.Keys.Aggregate((sum, aggregate) => sum + ", " + aggregate);
+                logger.Warn("Unknown options for {0}: {1}", this.GetType().Name, combinedKeys);
+            }
+
             return options;
         }
 
