@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using RestSharp;
 using RestSharp.Authenticators;
@@ -14,6 +15,7 @@ namespace Sentry.Services
             public string ConsumerSecret { get; set; }
             public string Token { get; set; }
             public string TokenSecret { get; set; }
+            public string PostStatus { get; set; }
         };
 
         protected ServiceOptions Options { get; set; }
@@ -50,6 +52,17 @@ namespace Sentry.Services
 
             IRestResponse<dynamic> response = client.Execute<dynamic>(request);
             logger.Trace("UserTimeline response: {0}", response.Content);
+            return response;
+        }
+
+        private IRestResponse<dynamic> Post(string message)
+        {
+            var request = new RestRequest("/1.1/statuses/update.json", Method.POST);
+            request.RequestFormat = DataFormat.Json;
+            request.AddParameter("status", message);
+
+            IRestResponse<dynamic> response = client.Execute<dynamic>(request);
+            logger.Trace("Post response: {0}", response.Content);
             return response;
         }
 
@@ -98,8 +111,18 @@ namespace Sentry.Services
 
         public override void Action(List<string> actions)
         {
-            base.Action(actions);
+            if (actions.Contains("post", StringComparer.InvariantCultureIgnoreCase))
+            {
+                var postResponse = Post(Options.PostStatus);
+                if (postResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    logger.Info("Posted Twitter status: {0}", Options.PostStatus);
+                }
+                else
+                {
+                    logger.Error("Unexpected response to Twitter post: {0}", postResponse.ResponseStatus);
+                }
+            }
         }
-        
     }
 }
