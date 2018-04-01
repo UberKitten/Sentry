@@ -10,6 +10,9 @@ using System.ComponentModel;
 
 namespace Sentry.Config
 {
+    /**
+     * Config is loaded from either the config.json file by default or the ConfigFile/ConfigText command line options
+     */ 
     class Config
     {
         public Guid Guid { get; set; }
@@ -25,9 +28,17 @@ namespace Sentry.Config
                 {
                     new Trigger
                     {
-                        TriggerStrings = new List<string>
+                        TriggerCriteria = new Services.TwitterApi.ServiceTriggerCriteria()
                         {
-                            "pineapple",
+                            TweetContains = new List<string>()
+                            {
+                                "pen",
+                                "pineapple",
+                                "apple",
+                                "pen"
+                            },
+                            RetweetsOver = 10000,
+                            RepliesOver = 100
                         },
                         Check = new List<string>
                         {
@@ -88,7 +99,11 @@ namespace Sentry.Config
 
     class Trigger
     {
-        public List<string> TriggerStrings { get; set; }
+        /**
+         * This is based on the ServiceTriggerCriteria in the Service.
+         */
+        //[JsonConverter(typeof(ServiceTriggerCriteriaConverter))]
+        public object TriggerCriteria { get; set; }
         public List<string> Check { get; set; }
         public List<TriggerAction> Services { get; set; }
     }
@@ -116,7 +131,10 @@ namespace Sentry.Config
         [DefaultValue(true)]
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
         public bool CheckQuorum { get; set; }
-        
-        public Dictionary<string, string> Options { get; set; }
+
+        /**
+         * This is based on the ServiceOptions in the Service.
+         */
+        public object Options { get; set; }
     }
 }

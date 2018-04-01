@@ -18,11 +18,17 @@ namespace Sentry.Services
 
         protected ServiceOptions Options { get; set; }
 
+        public class ServiceTriggerCriteria
+        {
+            // Currently no triggers, only actions
+        };
+
         protected ChromeDriver driver;
 
-        public TwitterWeb(ServiceConfig config) : base(config)
+        public TwitterWeb(string id, object ServiceOptions) : base(id)
         {
-            Options = InitializeOptions<ServiceOptions>();
+            Options = (ServiceOptions)ServiceOptions;
+
             var driverOptions = new ChromeOptions();
 
 #if !DEBUG
@@ -74,13 +80,14 @@ namespace Sentry.Services
             return !driver.Url.Contains("/login");
         }
 
-        public override bool Check(string triggerString)
+        public override bool Check(object _triggerCriteria)
         {
+            var triggerCriteria = (ServiceTriggerCriteria)_triggerCriteria;
             if (!IsLoggedIn())
             {
                 Login();
             }
-            return base.Check(triggerString);
+            return base.Check(triggerCriteria);
         }
 
         public override void Action(List<string> actions)

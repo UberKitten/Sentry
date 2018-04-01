@@ -1,10 +1,17 @@
 {
-  "Guid": "722c84af-07bf-4f4d-a788-1fb5c3487ca6",
+  "Guid": "d31624e0-e560-449b-b5e6-14e142aefef2",
   "Triggers": [
     {
-      "TriggerStrings": [
-        "pineapple"
-      ],
+      "TriggerCriteria": {
+        "TweetContains": [
+          "pen",
+          "pineapple",
+          "apple",
+          "pen"
+        ],
+        "RetweetsOver": 10000,
+        "RepliesOver": 100
+      },
       "Check": [
         "publictwitter"
       ],
@@ -27,7 +34,7 @@
   ],
   "Services": [
     {
-      "Type": "twitter",
+      "Type": "twitterapi",
       "Id": "publictwitter",
       "CheckQuorum": false,
       "Options": {
@@ -38,7 +45,7 @@
       }
     },
     {
-      "Type": "twitter",
+      "Type": "twitterapi",
       "Id": "sinfultwitter",
       "CheckQuorum": false,
       "Options": {

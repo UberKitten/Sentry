@@ -10,7 +10,7 @@ namespace Sentry.Services
 {
     class TwitterApi : BaseService
     {
-        protected class ServiceOptions {
+        public class ServiceOptions {
             public string ConsumerKey { get; set; }
             public string ConsumerSecret { get; set; }
             public string Token { get; set; }
@@ -20,12 +20,19 @@ namespace Sentry.Services
 
         protected ServiceOptions Options { get; set; }
 
+        public class ServiceTriggerCriteria {
+            public List<string> TweetContains { get; set; }
+            public int RetweetsOver { get; set; }
+            public int RepliesOver { get; set; }
+        };
+
         protected RestClient client = new RestClient("https://api.twitter.com/");
         protected long user_id = -1;
 
-        public TwitterApi(ServiceConfig config) : base(config)
+        public TwitterApi(string id, object ServiceOptions) : base(id)
         {
-            Options = InitializeOptions<ServiceOptions>();
+            Options = (ServiceOptions)ServiceOptions;
+
             client.Authenticator = OAuth1Authenticator.ForProtectedResource(Options.ConsumerKey, Options.ConsumerSecret, Options.Token, Options.TokenSecret);
             client.AddHandler("application/json", new DynamicJsonDeserializer());
         }
@@ -80,8 +87,10 @@ namespace Sentry.Services
             }
         }
 
-        public override bool Check(string triggerString)
+        public override bool Check(object _triggerCriteria)
         {
+            var triggerCriteria = (ServiceTriggerCriteria)_triggerCriteria;
+
             if (user_id == -1)
             {
                 var verifyResponse = VerifyCredentials();
@@ -100,10 +109,13 @@ namespace Sentry.Services
             var tweets = tweetsResponse.Data.ToObject<List<dynamic>>();
             foreach (var tweet in tweets)
             {
-                if (tweet.text.Value.Contains(triggerString))
+                foreach (var triggerString in triggerCriteria.TweetContains)
                 {
-                    logger.Debug("Found trigger string in text: {0}", tweet.text);
-                    return true;
+                    if (tweet.text.Value.Contains(triggerString))
+                    {
+                        logger.Debug("Found trigger string in text: {0}", tweet.text);
+                        return true;
+                    }
                 }
             }
             return false;
