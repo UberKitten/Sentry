@@ -24,25 +24,26 @@ namespace Sentry
         protected Dictionary<int, DateTime> lastActions = new Dictionary<int, DateTime>();
         protected Config.Config config = null;
 
+        protected static ManualResetEvent exitEvent = new ManualResetEvent(false);
+
         static void Main(string[] args)
         {
             var program = new Program();
-
-            var exitEvent = new ManualResetEvent(false);
+            
             Console.CancelKeyPress += (sender, eventArgs) => {
-                program.cancellationToken.Cancel();
+                program.cancellationToken.Cancel(); // let the loop exit (if running)
                 eventArgs.Cancel = true;
-                exitEvent.Set();
             };
             var parser = new Parser(with => {
                 with.CaseSensitive = false;
+                with.HelpWriter = Console.Out;
             });
             var options = parser.ParseArguments<RunOptions, ExampleConfigOptions>(args)
                 .WithParsed<RunOptions>(opts => program.Run(opts))
-                .WithParsed<ExampleConfigOptions>(opts => program.ExampleConfig(opts));
+                .WithParsed<ExampleConfigOptions>(opts => program.ExampleConfig(opts))
+                .WithNotParsed(t => exitEvent.Set()); // So we don't just hang
 
             // Wait here for loop to complete
-            
             exitEvent.WaitOne();
         }
 
@@ -72,6 +73,8 @@ namespace Sentry
             {
                 logger.Error("Not overwriting {0}", options.ConfigFile);
             }
+
+            exitEvent.Set();
         }
 
         protected Config.Config GetConfig(Options options)
@@ -216,7 +219,7 @@ namespace Sentry
             }
 
             // If cancellation is requested via cancellationToken, this exits the main thread
-            Environment.Exit(1);
+            exitEvent.Set();
         }
 
         protected void JFMSUF(RunOptions options)
@@ -302,7 +305,7 @@ namespace Sentry
                 if (triggerConfigs.Count <= 0 && threadsAlive <= 0)
                 {
                     logger.Info("JustFuckMyShitUpFam mode finished, have a nice day!");
-                    cancellationToken.Cancel();
+                    cancellationToken.Cancel(); // Main thread will exit and trigger exitEvent
                 }
                 else
                 {
@@ -328,72 +331,69 @@ namespace Sentry
                     {
                         // We don't assign an ID to Triggers, because it's not really necessary so the index in config.Triggers is the de facto ID
                         logger.Debug("Starting check for trigger index {0}", i);
-
-                        foreach (var triggerString in trigger.TriggerStrings)
+                        
+                        // If it's not in lastActions, no action has ever been run
+                        if (lastActions.TryGetValue(i, out DateTime lastAction))
                         {
-                            // If it's not in lastActions, no action has ever been run
-                            if (lastActions.TryGetValue(i, out DateTime lastAction))
+                            var secondsSince = (DateTime.UtcNow - lastAction).Seconds;
+                            if (secondsSince < options.Cooldown)
                             {
-                                var secondsSince = (DateTime.UtcNow - lastAction).Seconds;
-                                if (secondsSince < options.Cooldown)
-                                {
-                                    logger.Debug("Skipping check for trigger index {0} as it has only been {1} seconds since last trigger", i, secondsSince);
-                                    continue;
-                                }
+                                logger.Debug("Skipping check for trigger index {0} as it has only been {1} seconds since last trigger", i, secondsSince);
+                                continue;
+                            }
+                        }
+
+                        foreach (var checkId in trigger.Check)
+                        {
+                            logger.Debug("Checking {0}", checkId);
+
+                            // Pull relevant service to check
+                            if (!services.ContainsKey(checkId.ToLowerInvariant()))
+                            {
+                                logger.Error("Missing service {0}, did it fail verification?", checkId);
+                                continue;
                             }
 
-                            foreach (var checkId in trigger.Check)
+                            var serviceToCheck = services[checkId.ToLowerInvariant()];
+                            logger.Trace("Pulled service to check {0}", serviceToCheck.GetType());
+
+                            // Avoid calling Check if a service is currently doing an Action in another thread
+                            // Simplifies service code to not require thread safety, does reduce concurrency though
+                            // I.e. a service can not be used for checking and acting at the same time (even different triggers)
+                            // The check will wait until the service is done acting
+                            if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
                             {
-                                logger.Debug("Checking {0} for trigger word {1}", checkId, triggerString);
+                                logger.Info("Skipping check for {0} because actions are currently running", checkId);
+                                continue;
+                            }
 
-                                // Pull relevant service to check
-                                if (!services.ContainsKey(checkId.ToLowerInvariant()))
+                            try
+                            {
+                                if (serviceToCheck.Check(trigger.TriggerCriteria))
                                 {
-                                    logger.Error("Missing service {0}, did it fail verification?", checkId);
-                                    continue;
-                                }
+                                    logger.Info("Trigger detected for service {0}", checkId);
+                                    lastActions.Add(i, DateTime.UtcNow);
 
-                                var serviceToCheck = services[checkId.ToLowerInvariant()];
-                                logger.Trace("Pulled service to check {0}", serviceToCheck.GetType());
-
-                                // Avoid calling Check if a service is currently doing an Action in another thread
-                                // Simplifies service code to not require thread safety, does reduce concurrency though
-                                // I.e. a service can not be used for checking and acting at the same time (even different triggers)
-                                // The check will wait until the service is done acting
-                                if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
-                                {
-                                    logger.Info("Skipping check for {0} because actions are currently running", checkId);
-                                    continue;
-                                }
-
-                                try
-                                {
-                                    if (serviceToCheck.Check(triggerString))
+                                    // Loop through actions and start
+                                    foreach (var action in trigger.Services)
                                     {
-                                        logger.Info("Trigger string {0} detected for service {1}", triggerString, checkId);
-                                        lastActions.Add(i, DateTime.UtcNow);
+                                        var actionsAggregated = action.Actions.Aggregate((sum, addition) => sum + ", " + addition);
+                                        logger.Info("Running actions {0} on service {1}", actionsAggregated, action.Id);
 
-                                        // Loop through actions and start
-                                        foreach (var action in trigger.Services)
-                                        {
-                                            var actionsAggregated = action.Actions.Aggregate((sum, addition) => sum + ", " + addition);
-                                            logger.Info("Running actions {0} on service {1}", actionsAggregated, action.Id);
+                                        var serviceToAct = services[action.Id.ToLowerInvariant()];
+                                        logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
 
-                                            var serviceToAct = services[action.Id.ToLowerInvariant()];
-                                            logger.Trace("Pulled service {0} to act", serviceToAct.GetType());
+                                        var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
+                                        actionThreads.Add(action.Id, actionThread);
+                                        actionThread.Start();
 
-                                            var actionThread = new Thread(() => RunServiceAction(serviceToAct, action.Actions));
-                                            actionThreads.Add(action.Id, actionThread);
-                                            actionThread.Start();
-
-                                            TraceActionThreads();
-                                        }
+                                        TraceActionThreads();
                                     }
                                 }
-                                catch (Exception ex)
-                                {
-                                    logger.Error(ex, "Error while checking {0} for trigger string {1}", checkId, triggerString);
-                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, "Error while checking {0}", checkId);
                             }
                         }
 
