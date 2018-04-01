@@ -38,7 +38,7 @@ namespace Sentry.Config
                                 "pen"
                             },
                             RetweetsOver = 10000,
-                            RepliesOver = 100
+                            FavoritesOver = 100
                         },
                         Check = new List<string>
                         {
