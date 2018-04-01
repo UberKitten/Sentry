@@ -23,7 +23,7 @@ namespace Sentry.Services
         public class ServiceTriggerCriteria {
             public List<string> TweetContains { get; set; }
             public int RetweetsOver { get; set; }
-            public int RepliesOver { get; set; }
+            public int FavoritesOver { get; set; }
         };
 
         protected RestClient client = new RestClient("https://api.twitter.com/");
@@ -109,11 +109,32 @@ namespace Sentry.Services
             var tweets = tweetsResponse.Data.ToObject<List<dynamic>>();
             foreach (var tweet in tweets)
             {
+                // Check TweetContains
                 foreach (var triggerString in triggerCriteria.TweetContains)
                 {
                     if (tweet.text.Value.Contains(triggerString))
                     {
                         logger.Debug("Found trigger string in text: {0}", tweet.text);
+                        return true;
+                    }
+                }
+
+                // Check RetweetsOver
+                if (triggerCriteria.RetweetsOver > 0) // 0 if omitted
+                {
+                    if (tweet.retweet_count > triggerCriteria.RetweetsOver)
+                    {
+                        logger.Debug("Found tweet with retweet count {0} which is greater than criteria {1}", tweet.retweet_count, triggerCriteria.RetweetsOver);
+                        return true;
+                    }
+                }
+                
+                // Check FavoritesOver
+                if (triggerCriteria.FavoritesOver > 0) // 0 if omitted
+                {
+                    if (tweet.favorite_count > triggerCriteria.FavoritesOver)
+                    {
+                        logger.Debug("Found tweet with favorite count {0} which is greater than criteria {1}", tweet.favorite_count, triggerCriteria.FavoritesOver);
                         return true;
                     }
                 }

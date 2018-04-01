@@ -1,5 +1,5 @@
 {
-  "Guid": "d31624e0-e560-449b-b5e6-14e142aefef2",
+  "Guid": "774cb26f-047e-4dcd-9df1-b4610d0afd67",
   "Triggers": [
     {
       "TriggerCriteria": {
@@ -10,7 +10,7 @@
           "pen"
         ],
         "RetweetsOver": 10000,
-        "RepliesOver": 100
+        "FavoritesOver": 100
       },
       "Check": [
         "publictwitter"
