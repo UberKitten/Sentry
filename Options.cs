@@ -5,6 +5,9 @@ using System.Text;
 
 namespace Sentry
 {
+    /**
+     * Options are passed on the command line.
+     */ 
     class Options
     {
         [Option('c', Default = "config.json", HelpText = "Configuration file in JSON format to use.")]

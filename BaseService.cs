@@ -1,5 +1,4 @@
 ﻿using NLog;
-using Sentry.Config;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,10 +8,6 @@ namespace Sentry
 {
     abstract class BaseService
     {
-        protected ServiceConfig Config { get; set; }
-
-        protected Logger logger;
-
         /**
          * Services are recommended to cache session data in instance variables
          * For example, keep a session cookie and continue using it until invalid
@@ -20,42 +15,27 @@ namespace Sentry
          * Services are responsible for handling their own errors and health
          * If the state of the service means it cannot continue, it should reset its own state if possible
          * (The main class will not destroy and recreate it)
-         */ 
-        public BaseService(ServiceConfig config)
+         */
+
+        protected Logger logger;
+        
+        /**
+         * Services should implement this constructor.
+         * Ideally implement a sub-class called "ServiceOptions" and it will be casted here
+         */   
+        public BaseService(string id, object ServiceOptions) : this(id) { }
+
+        protected BaseService(string id)
         {
-            this.Config = config;
-            this.logger = LogManager.GetLogger(config.Id);
+            this.logger = LogManager.GetLogger(id);
         }
-
-        protected T InitializeOptions<T>()
-        {
-            var leftoverConfigElements = new Dictionary<string, string>(Config.Options);
-
-            var options = Activator.CreateInstance<T>();
-            foreach (var property in options.GetType().GetProperties())
-            {
-                if (Config.Options.ContainsKey(property.Name))
-                {
-                    property.SetValue(options, Config.Options[property.Name]);
-                    leftoverConfigElements.Remove(property.Name);
-                }
-            }
-
-            if (leftoverConfigElements.Count > 0)
-            {
-                var combinedKeys = leftoverConfigElements.Keys.Aggregate((sum, aggregate) => sum + ", " + aggregate);
-                logger.Warn("Unknown options for {0}: {1}", this.GetType().Name, combinedKeys);
-            }
-
-            return options;
-        }
-
+        
         /**
          * Called upon startup to verify that configuration is correct
          * For example: Check that all parameters are specified,
          * check that login credentials work, etc
          * Any errors should be thrown as exceptions
-         */ 
+         */
         public virtual void Verify()
         {
             logger.Debug("Verify not implemented, skipping verification");
@@ -66,8 +46,10 @@ namespace Sentry
          * Service must check for recent posts/events/etc to determine if trigger appears
          * Comparison must be case-sensitive by default
          */
-        public virtual bool Check(string triggerString)
+        public virtual bool Check(object _triggerCriteria)
         {
+            // var triggerCriteria = (ServiceTriggerCriteria)_triggerCriteria;
+
             throw new NotImplementedException();
         }
 

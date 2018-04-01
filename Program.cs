@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 namespace Sentry
 {
@@ -45,6 +46,7 @@ namespace Sentry
 
             // Wait here for loop to complete
             exitEvent.WaitOne();
+            Environment.Exit(0);
         }
 
         public void ExampleConfig(ExampleConfigOptions options)
@@ -135,7 +137,23 @@ namespace Sentry
                     try
                     {
                         logger.Debug("Adding service {0} with Id {1}", serviceType.FullName, serviceConfig.Id);
-                        var service = (BaseService)Activator.CreateInstance(serviceType, serviceConfig);
+
+                        // serviceConfig.Options is a JObject, we need to convert it to the ServiceOptions on the service
+                        // This is kind of dirty (see BaseService discussion) but it works
+                        var serviceOptionsType = serviceType.GetNestedType("ServiceOptions", BindingFlags.Public | BindingFlags.NonPublic);
+                        
+                        if (serviceOptionsType == null)
+                        {
+                            logger.Trace("Did not locate ServiceOptions nested type for service {0}", serviceType.FullName);
+                            serviceConfig.Options = null;
+                        }
+                        else
+                        {
+                            logger.Trace("Located ServiceOptions nested type {0} for service {1}", serviceOptionsType.FullName, serviceType.FullName);
+                            serviceConfig.Options = ((JObject)serviceConfig.Options).ToObject(serviceOptionsType);
+                        }
+
+                        var service = (BaseService)Activator.CreateInstance(serviceType, serviceConfig.Id, serviceConfig.Options);
                         services.Add(serviceConfig.Id.ToLowerInvariant(), service);
                         logger.Info("Loaded service {0}", serviceConfig.Id);
                     }
@@ -369,7 +387,24 @@ namespace Sentry
 
                             try
                             {
-                                if (serviceToCheck.Check(trigger.TriggerCriteria))
+                                // trigger.TriggerCriter is a JObject, we need to convert it to the ServiceTriggerCriteria on the service
+                                // Similar to what we did with ServiceOptions
+                                // In this case, we don't overwrite the variable in config because there could be different, type-compatible services on this trigger
+                                var serviceTriggerCriteriaType = serviceToCheck.GetType().GetNestedType("ServiceTriggerCriteria", BindingFlags.Public | BindingFlags.NonPublic);
+
+                                object triggerCriteria = null;
+                                if (serviceTriggerCriteriaType == null)
+                                {
+                                    // Trigger criteria isn't required for a check
+                                    logger.Trace("Did not locate ServiceTriggerCriteria nested type for service type {0}", serviceToCheck.GetType().FullName);
+                                }
+                                else
+                                {
+                                    logger.Trace("Located ServiceOptions nested type {0} for service {1}", serviceTriggerCriteriaType.FullName, serviceToCheck.GetType().FullName);
+                                    triggerCriteria = ((JObject)trigger.TriggerCriteria).ToObject(serviceTriggerCriteriaType);
+                                }
+
+                                if (serviceToCheck.Check(triggerCriteria))
                                 {
                                     logger.Info("Trigger detected for service {0}", checkId);
                                     lastActions.Add(i, DateTime.UtcNow);
