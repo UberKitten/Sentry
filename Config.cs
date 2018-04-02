@@ -125,7 +125,11 @@ namespace Sentry.Config
                         NotifyStartup = true,
                         NotifyMultiFactorRequests = true,
                         NotifyOnTrigger = true,
-                        
+                        Options = new NotifyServices.Pushover.NotifyServiceOptions
+                        {
+                            Token = "123",
+                            User = "321"
+                        }
                     }
                 }
             };

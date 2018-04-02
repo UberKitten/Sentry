@@ -1,5 +1,13 @@
 {
-  "Guid": "774cb26f-047e-4dcd-9df1-b4610d0afd67",
+  "LoopDelay": 600,
+  "Cooldown": 864000,
+  "EnableMultiFactorRequests": true,
+  "Quorum": {
+    "Enabled": false,
+    "CheckDelayMultiplier": 1.25,
+    "QuorumJitterLowerBound": 30,
+    "QuorumJitterUpperBound": 60
+  },
   "Triggers": [
     {
       "TriggerCriteria": {
@@ -29,14 +37,15 @@
             "delete"
           ]
         }
-      ]
+      ],
+      "NotifyServices": null
     }
   ],
   "Services": [
     {
       "Type": "twitterapi",
       "Id": "publictwitter",
-      "CheckQuorum": false,
+      "CheckQuorum": true,
       "Options": {
         "ConsumerKey": "example",
         "ConsumerSecret": "example",
@@ -47,12 +56,27 @@
     {
       "Type": "twitterapi",
       "Id": "sinfultwitter",
-      "CheckQuorum": false,
+      "CheckQuorum": true,
       "Options": {
         "ConsumerKey": "example",
         "ConsumerSecret": "example",
         "Token": "example",
         "TokenSecret": "example"
+      }
+    }
+  ],
+  "NotifyServices": [
+    {
+      "Type": "pushover",
+      "NotifyStartup": true,
+      "NotifyMultiFactorRequests": true,
+      "NotifyOnTrigger": true,
+      "Options": {
+        "Token": "123",
+        "User": "321",
+        "Device": null,
+        "Priority": null,
+        "Sound": null
       }
     }
   ]
