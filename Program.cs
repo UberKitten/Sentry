@@ -354,7 +354,7 @@ namespace Sentry
                         if (lastActions.TryGetValue(i, out DateTime lastAction))
                         {
                             var secondsSince = (DateTime.UtcNow - lastAction).Seconds;
-                            if (secondsSince < options.Cooldown)
+                            if (secondsSince < config.Cooldown)
                             {
                                 logger.Debug("Skipping check for trigger index {0} as it has only been {1} seconds since last trigger", i, secondsSince);
                                 continue;
@@ -458,7 +458,7 @@ namespace Sentry
                     logger.Debug("Time taken in loop: {0} ms", timeElapsed.ElapsedMilliseconds);
 
                     // Time left to wait in milliseconds (can be negative)
-                    var timeLeft = options.LoopDelay * 1000 - timeElapsed.ElapsedMilliseconds;
+                    var timeLeft = config.LoopDelay * 1000 - timeElapsed.ElapsedMilliseconds;
                     logger.Trace("Time left to wait: {0} ms", timeLeft);
 
                     if (timeLeft > 0)
@@ -475,6 +475,12 @@ namespace Sentry
                     // Ideally we would exit or do some kind of action or cleanup here,
                     // but the show (and actions + checks) must go on
                 }
+            }
+
+            if (options.LoopOnce)
+            {
+                logger.Info("Cancelling loop because LoopOnce option was specified");
+                cancellationToken.Cancel();
             }
         }
 

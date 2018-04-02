@@ -15,15 +15,39 @@ namespace Sentry.Config
      */ 
     class Config
     {
-        public Guid Guid { get; set; }
+        public Config()
+        {
+            LoopDelay = 600;
+            Cooldown = 864000;
+            EnableMultiFactorRequests = true;
+
+            Quorum = new QuorumConfig();
+            Triggers = new List<Trigger>();
+            Services = new List<ServiceConfig>();
+        }
+
+        /**
+         * How long, in seconds, to wait between each check.
+         */
+        public int LoopDelay { get; set; }
+
+        /**
+         * How long in seconds to wait after a trigger activates before checking again.
+         */
+        public int Cooldown { get; set; }
+
+        public bool EnableMultiFactorRequests { get; set; }
+
+        public QuorumConfig Quorum { get; set; }
+
         public List<Trigger> Triggers { get; set; }
         public List<ServiceConfig> Services { get; set; }
+        public List<NotifyServiceConfig> NotifyServices { get; set; }
 
         public static Config GetExample()
         {
             return new Config
             {
-                Guid = Guid.NewGuid(),
                 Triggers = new List<Trigger>
                 {
                     new Trigger
@@ -92,9 +116,45 @@ namespace Sentry.Config
                             ["TokenSecret"] = "example",
                         }
                     }
+                },
+                NotifyServices = new List<NotifyServiceConfig>
+                {
+                    new NotifyServiceConfig
+                    {
+                        Type = "pushover",
+                        NotifyStartup = true,
+                        NotifyMultiFactorRequests = true,
+                        NotifyOnTrigger = true,
+                        
+                    }
                 }
             };
         }
+    }
+
+    class QuorumConfig
+    {
+        public QuorumConfig()
+        {
+            Enabled = false;
+            CheckDelayMultiplier = 1.25;
+            QuorumJitterLowerBound = 30;
+            QuorumJitterUpperBound = 60;
+        }
+        
+        public bool Enabled { get; set; }
+
+        /**
+         * Multiplied by LoopDelay to determine the minimum time to wait before assuming quorum success.
+         */
+        public double CheckDelayMultiplier { get; set; }
+
+        /**
+         * Minimum and maximum number of seconds for the random delay when checking for quorum
+         */
+        public int QuorumJitterLowerBound { get; set; }
+        public int QuorumJitterUpperBound { get; set; }
+
     }
 
     class Trigger
@@ -102,10 +162,10 @@ namespace Sentry.Config
         /**
          * This is based on the ServiceTriggerCriteria in the Service.
          */
-        //[JsonConverter(typeof(ServiceTriggerCriteriaConverter))]
         public object TriggerCriteria { get; set; }
         public List<string> Check { get; set; }
         public List<TriggerAction> Services { get; set; }
+        public List<NotifyServiceConfig> NotifyServices { get; set; }
     }
     
     class TriggerAction
@@ -115,8 +175,14 @@ namespace Sentry.Config
         
         public List<string> Actions { get; set; }
     }
+
     class ServiceConfig
     {
+        public ServiceConfig()
+        {
+            CheckQuorum = true;
+        }
+
         // The two required parameters for each service
 
         // What needs to run, e.g. Twitter, Facebook, email, etc
@@ -127,13 +193,34 @@ namespace Sentry.Config
         // Allows e.g. multiple Twitter accounts with different credentials
         [JsonRequired]
         public string Id { get; set; }
-
-        [DefaultValue(true)]
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Populate)]
+        
         public bool CheckQuorum { get; set; }
 
         /**
          * This is based on the ServiceOptions in the Service.
+         */
+        public object Options { get; set; }
+    }
+
+    class NotifyServiceConfig
+    {
+        public NotifyServiceConfig()
+        {
+            NotifyStartup = true;
+            NotifyMultiFactorRequests = true;
+            NotifyOnTrigger = true;
+        }
+
+        // What service to use, e.g. Pushover, Pushbullet, email, etc
+        [JsonRequired]
+        public string Type { get; set; }
+
+        public bool NotifyStartup { get; set; }
+        public bool NotifyMultiFactorRequests { get; set; }
+        public bool NotifyOnTrigger { get; set; }
+
+        /**
+         * This is based on the NotifyServiceOptions in the NotifyService.
          */
         public object Options { get; set; }
     }
