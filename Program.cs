@@ -19,6 +19,7 @@ namespace Sentry
         private Logger logger = LogManager.GetLogger("Sentry");
         protected CancellationTokenSource cancellationToken = new CancellationTokenSource();
         protected Dictionary<string, BaseService> services = new Dictionary<string, BaseService>();
+        protected List<Tuple<BaseNotifyService, NotifyServiceConfig>> notifyServices = new List<Tuple<BaseNotifyService, NotifyServiceConfig>>();
         protected Thread loopThread = null;
 
         protected Dictionary<string, Thread> actionThreads = new Dictionary<string, Thread>();
@@ -112,6 +113,69 @@ namespace Sentry
         {
             config = GetConfig(options);
             logger.Info("Loaded {0} with {1} triggers and {2} services", options.ConfigFile, config.Triggers.Count, config.Services.Count);
+            
+            // Build list of NotifyServices
+            // https://stackoverflow.com/a/6944605
+            var notifyServiceTypes = new List<Type>();
+            foreach (Type type in Assembly.GetAssembly(typeof(BaseNotifyService)).GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(BaseNotifyService))))
+            {
+                logger.Trace("Found notify service {0}", type.FullName);
+                notifyServiceTypes.Add(type);
+            }
+            logger.Debug("Loaded {0} notify service types", notifyServiceTypes.Count);
+
+            foreach (var notifyServiceConfig in config.NotifyServices)
+            {
+                var notifyServiceType = notifyServiceTypes.SingleOrDefault(t => t.Name.Equals(notifyServiceConfig.Type, StringComparison.InvariantCultureIgnoreCase));
+
+                if (notifyServiceType == null)
+                {
+                    logger.Error("Unable to find notify service {0}, skipping", notifyServiceConfig.Type);
+                }
+                else
+                {
+                    try
+                    {
+                        logger.Debug("Adding notify service {0}", notifyServiceType.FullName);
+
+                        // notifyServiceConfig.Options is a JObject, we need to convert it to the ServiceOptions on the service
+                        // This is kind of dirty (see BaseService discussion) but it works
+                        var notifyServiceOptionsType = notifyServiceType.GetNestedType("NotifyServiceOptions", BindingFlags.Public | BindingFlags.NonPublic);
+
+                        if (notifyServiceOptionsType == null)
+                        {
+                            logger.Trace("Did not locate NotifyServiceOptions nested type for notify service {0}", notifyServiceType.FullName);
+                            notifyServiceConfig.Options = null;
+                        }
+                        else
+                        {
+                            logger.Trace("Located ServiceOptions nested type {0} for notify service {1}", notifyServiceOptionsType.FullName, notifyServiceType.FullName);
+                            notifyServiceConfig.Options = ((JObject)notifyServiceConfig.Options).ToObject(notifyServiceOptionsType);
+                        }
+
+                        var notifyService = (BaseNotifyService)Activator.CreateInstance(notifyServiceType, notifyServiceConfig.Options);
+                        notifyServices.Add(new Tuple<BaseNotifyService, NotifyServiceConfig>(notifyService, notifyServiceConfig));
+                        logger.Info("Loaded notify service {0}", notifyServiceConfig.Type);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Error while loading notify service {0}, skipping", notifyServiceConfig.Type);
+                    }
+                }
+            }
+
+            foreach (var notifyService in notifyServices.Where(t => t.Item2.NotifyStartup))
+            {
+                try
+                {
+                    notifyService.Item1.NotifyStartup();
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, "Error while trying to notify startup for notify service {0}", notifyService.Item2.Type);
+                }
+            }
 
             // Build list of Services
             // https://stackoverflow.com/a/6944605
@@ -408,6 +472,18 @@ namespace Sentry
                                 {
                                     logger.Info("Trigger detected for service {0}", checkId);
                                     lastActions.Add(i, DateTime.UtcNow);
+                                    
+                                    foreach (var notifyService in notifyServices.Where(t => t.Item2.NotifyOnTrigger))
+                                    {
+                                        try
+                                        {
+                                            notifyService.Item1.NotifyOnTrigger(checkId);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            logger.Error(ex, "Error while trying to notify trigger for notify service {0}", notifyService.Item2.Type);
+                                        }
+                                    }
 
                                     // Loop through actions and start
                                     foreach (var action in trigger.Services)
