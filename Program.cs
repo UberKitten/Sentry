@@ -17,17 +17,15 @@ namespace Sentry
     class Program
     {
         private Logger logger = LogManager.GetLogger("Sentry");
-        protected CancellationTokenSource cancellationToken = new CancellationTokenSource();
-        protected Dictionary<string, BaseService> services = new Dictionary<string, BaseService>();
-        protected List<Tuple<BaseNotifyService, NotifyServiceConfig>> notifyServices = new List<Tuple<BaseNotifyService, NotifyServiceConfig>>();
-        protected Thread loopThread = null;
-
-        protected Dictionary<string, Thread> actionThreads = new Dictionary<string, Thread>();
-        protected Dictionary<int, DateTime> lastActions = new Dictionary<int, DateTime>();
         protected Config.Config config = null;
 
         protected static ManualResetEvent exitEvent = new ManualResetEvent(false);
+        protected CancellationTokenSource cancellationToken = new CancellationTokenSource();
+        protected Dictionary<string, Thread> actionThreads = new Dictionary<string, Thread>();
 
+        protected Dictionary<string, BaseService> services = new Dictionary<string, BaseService>();
+        protected List<Tuple<BaseNotifyService, NotifyServiceConfig>> notifyServices = new List<Tuple<BaseNotifyService, NotifyServiceConfig>>();
+        
         static void Main(string[] args)
         {
             var program = new Program();
@@ -385,6 +383,9 @@ namespace Sentry
         protected void Loop(RunOptions options)
         {
             logger.Info("Starting main loop");
+
+            var lastActions = new Dictionary<int, DateTime>();
+
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
