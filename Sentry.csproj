@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.2.1" />
+    <PackageReference Include="EmbedIO" Version="1.13.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="NLog" Version="4.5.0-rc04" />
     <PackageReference Include="RestSharp" Version="106.3.0-alpha0002" />
