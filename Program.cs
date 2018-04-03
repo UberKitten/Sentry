@@ -36,6 +36,7 @@ namespace Sentry
                 program.cancellationToken.Cancel(); // let the loop exit (if running)
                 eventArgs.Cancel = true;
             };
+
             var parser = new Parser(with => {
                 with.CaseSensitive = false;
                 with.HelpWriter = Console.Out;
@@ -114,15 +115,7 @@ namespace Sentry
             config = GetConfig(options);
             logger.Info("Loaded {0} with {1} triggers and {2} services", options.ConfigFile, config.Triggers.Count, config.Services.Count);
             
-            // Build list of NotifyServices
-            // https://stackoverflow.com/a/6944605
-            var notifyServiceTypes = new List<Type>();
-            foreach (Type type in Assembly.GetAssembly(typeof(BaseNotifyService)).GetTypes()
-                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(BaseNotifyService))))
-            {
-                logger.Trace("Found notify service {0}", type.FullName);
-                notifyServiceTypes.Add(type);
-            }
+            var notifyServiceTypes = GetSubTypes(typeof(BaseNotifyService));
             logger.Debug("Loaded {0} notify service types", notifyServiceTypes.Count);
 
             foreach (var notifyServiceConfig in config.NotifyServices)
@@ -165,6 +158,7 @@ namespace Sentry
                 }
             }
 
+            // Send notification ASAP about startup
             foreach (var notifyService in notifyServices.Where(t => t.Item2.NotifyStartup))
             {
                 try
@@ -176,16 +170,8 @@ namespace Sentry
                     logger.Error(ex, "Error while trying to notify startup for notify service {0}", notifyService.Item2.Type);
                 }
             }
-
-            // Build list of Services
-            // https://stackoverflow.com/a/6944605
-            var serviceTypes = new List<Type>();
-            foreach (Type type in Assembly.GetAssembly(typeof(BaseService)).GetTypes()
-                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(BaseService))))
-            {
-                logger.Trace("Found service {0}", type.FullName);
-                serviceTypes.Add(type);
-            }
+            
+            var serviceTypes = GetSubTypes(typeof(BaseService));
             logger.Debug("Loaded {0} service types", serviceTypes.Count);
 
             foreach (var serviceConfig in config.Services)
@@ -596,6 +582,20 @@ namespace Sentry
                     }
                 }
             }
+        }
+
+        private List<Type> GetSubTypes(Type baseType)
+        {
+            // Build list of sub types
+            // https://stackoverflow.com/a/6944605
+            var subTypes = new List<Type>();
+            foreach (Type type in Assembly.GetAssembly(baseType).GetTypes()
+                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(t)))
+            {
+                logger.Trace("Found sub type {0}", type.FullName);
+                subTypes.Add(type);
+            }
+            return subTypes;
         }
     }
 }
