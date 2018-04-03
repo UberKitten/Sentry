@@ -17,6 +17,7 @@ namespace Sentry
     class Program
     {
         private Logger logger = LogManager.GetLogger("Sentry");
+        private SentryWebServer webServer = null;
         protected Config.Config config = null;
 
         protected static ManualResetEvent exitEvent = new ManualResetEvent(false);
@@ -169,6 +170,14 @@ namespace Sentry
                 }
             }
             
+            // Start up web server for multi-factor requests
+            if (config.EnableMultiFactorRequests)
+            {
+                webServer = new SentryWebServer(options.MfaBindUrl);
+                webServer.Start();
+                logger.Info("Started web server bound to {0}", options.MfaBindUrl);
+            }
+
             var serviceTypes = GetSubTypes(typeof(BaseService));
             logger.Debug("Loaded {0} service types", serviceTypes.Count);
 

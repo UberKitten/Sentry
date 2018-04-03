@@ -35,6 +35,12 @@ namespace Sentry
         [Option(Default = 5, Hidden = true, HelpText = "How long, in seconds, to wait when attempting to launch actions.")]
         public int JFMSUFLoopDelay { get; set; }
         
+        [Option(Default = "http://localhost:8080/", HelpText = "URL used to bind Multi-Factor web server")]
+        public string MfaBindUrl { get; set; }
+        
+        [Option(Default = null, HelpText = "URL sent to user for Multi-Factor prompts, defaults to bind URL.")]
+        public string MfaPushUrl { get; set; }
+
         [Option(Default = false, Hidden = true, HelpText = "Skip confirmation prompt before proceeding in JFMSUF mode.")]
         public bool SkipJFMSUFConfirmation { get; set; }
     }
