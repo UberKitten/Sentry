@@ -409,25 +409,27 @@ namespace Sentry
                     var timeElapsed = new Stopwatch();
                     timeElapsed.Start();
 
-                    var i = 0;
+                    var currentTriggerIndex = 0;
                     foreach (var trigger in config.Triggers)
                     {
                         // If omitted
                         if (trigger.Check == null)
                         {
+                            currentTriggerIndex++;
                             continue;
                         }
 
                         // We don't assign an ID to Triggers, because it's not really necessary so the index in config.Triggers is the de facto ID
-                        logger.Debug("Starting check for trigger index {0}", i);
+                        logger.Debug("Starting check for trigger index {0}", currentTriggerIndex);
                         
                         // If it's not in lastActions, no action has ever been run
-                        if (lastActions.TryGetValue(i, out DateTime lastAction))
+                        if (lastActions.TryGetValue(currentTriggerIndex, out DateTime lastAction))
                         {
                             var secondsSince = (DateTime.UtcNow - lastAction).Seconds;
                             if (secondsSince < config.Cooldown)
                             {
-                                logger.Debug("Skipping check for trigger index {0} as it has only been {1} seconds since last trigger", i, secondsSince);
+                                logger.Debug("Skipping check for trigger index {0} as it has only been {1} seconds since last trigger", currentTriggerIndex, secondsSince);
+                                currentTriggerIndex++;
                                 continue;
                             }
                         }
@@ -440,6 +442,7 @@ namespace Sentry
                             if (!services.ContainsKey(checkId.ToLowerInvariant()))
                             {
                                 logger.Error("Missing service {0}, did it fail verification?", checkId);
+                                currentTriggerIndex++;
                                 continue;
                             }
 
@@ -453,6 +456,7 @@ namespace Sentry
                             if (actionThreads.ContainsKey(checkId.ToLowerInvariant()))
                             {
                                 logger.Info("Skipping check for {0} because actions are currently running", checkId);
+                                currentTriggerIndex++;
                                 continue;
                             }
 
@@ -474,7 +478,7 @@ namespace Sentry
                                     logger.Trace("Located ServiceOptions nested type {0} for service {1}", serviceTriggerCriteriaType.FullName, serviceToCheck.GetType().FullName);
                                     if (trigger.TriggerCriteria == null)
                                     {
-                                        logger.Trace("TriggerCriteria is null for trigger {0}", i);
+                                        logger.Trace("TriggerCriteria is null for trigger {0}", currentTriggerIndex);
                                     }
                                     else
                                     {
@@ -485,7 +489,7 @@ namespace Sentry
                                 if (serviceToCheck.Check(triggerCriteria))
                                 {
                                     logger.Info("Trigger detected for service {0}", checkId);
-                                    lastActions.Add(i, DateTime.UtcNow);
+                                    lastActions.Add(currentTriggerIndex, DateTime.UtcNow);
                                     
                                     foreach (var notifyService in notifyServices.Where(t => t.Item2.NotifyOnTrigger))
                                     {
@@ -522,7 +526,7 @@ namespace Sentry
                             }
                         }
 
-                        i++;
+                        currentTriggerIndex++;
                     }
 
                     TraceActionThreads();
