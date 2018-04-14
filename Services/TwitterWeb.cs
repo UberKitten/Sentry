@@ -37,6 +37,7 @@ namespace Sentry.Services
             driverOptions.AddArgument("disable-gpu");
 
             driver = new ChromeDriver(Directory.GetCurrentDirectory(), driverOptions);
+            driver.Manage().Timeouts().ImplicitWait = new TimeSpan(0, 0, 30);
         }
 
         public override void Verify()
@@ -121,6 +122,24 @@ namespace Sentry.Services
 
                     logger.Info("Twitter account {0} locked",Options.Username);
                 }
+            }
+
+
+            if (actions.Contains("delete", StringComparer.InvariantCultureIgnoreCase))
+            {
+                driver.Navigate().GoToUrl("https://twitter.com/settings/accounts/confirm_deactivation");
+
+                // "deactivate @username" button
+                var submit = driver.FindElementById("settings_save");
+                submit.Click();
+
+                // Password confirmation box
+                var confirmPassword = driver.FindElementById("auth_password");
+                confirmPassword.Click();
+                confirmPassword.SendKeys(Options.Password);
+                confirmPassword.Submit();
+
+                logger.Info("Twitter account {0} deactivated", Options.Username);
             }
         }
     }
