@@ -19,9 +19,9 @@ namespace Sentry.Config
         {
             LoopDelay = 600;
             Cooldown = 864000;
-            EnableMultiFactorRequests = true;
+            //EnableMultiFactorRequests = true;
 
-            Quorum = new QuorumConfig();
+            //Quorum = new QuorumConfig();
             Triggers = new List<Trigger>();
             Services = new List<ServiceConfig>();
         }
@@ -36,9 +36,9 @@ namespace Sentry.Config
          */
         public int Cooldown { get; set; }
 
-        public bool EnableMultiFactorRequests { get; set; }
+        //public bool EnableMultiFactorRequests { get; set; }
 
-        public QuorumConfig Quorum { get; set; }
+        //public QuorumConfig Quorum { get; set; }
 
         public List<Trigger> Triggers { get; set; }
         public List<ServiceConfig> Services { get; set; }

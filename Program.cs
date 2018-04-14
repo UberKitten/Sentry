@@ -174,12 +174,14 @@ namespace Sentry
             }
             
             // Start up web server for multi-factor requests
-            if (config.EnableMultiFactorRequests)
-            {
+            //if (config.EnableMultiFactorRequests)
+            //{
+#if DEBUG
                 webServer = new SentryWebServer(options.MfaBindUrl);
                 webServer.Start();
                 logger.Info("Started web server bound to {0}", options.MfaBindUrl);
-            }
+#endif
+            //}
 
             var serviceTypes = GetSubTypes(typeof(BaseService));
             logger.Debug("Loaded {0} service types", serviceTypes.Count);
