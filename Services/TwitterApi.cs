@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using RestSharp;
 using RestSharp.Authenticators;
 using Sentry.Config;
@@ -70,6 +71,17 @@ namespace Sentry.Services
 
             IRestResponse<dynamic> response = client.Execute<dynamic>(request);
             logger.Trace("Post response: {0}", response.Content);
+            return response;
+        }
+
+        private IRestResponse<dynamic> Delete(string id)
+        {
+            var request = new RestRequest("/1.1/statuses/destroy/{id}.json", Method.POST);
+            request.RequestFormat = DataFormat.Json;
+            request.AddUrlSegment("id", id);
+
+            IRestResponse<dynamic> response = client.Execute<dynamic>(request);
+            logger.Trace("Delete response: {0}", response.Content);
             return response;
         }
 
@@ -144,6 +156,45 @@ namespace Sentry.Services
 
         public override void Action(List<string> actions)
         {
+            // Scorch means delete all statuses (as opposed to delete, which means delete the account)
+            if (actions.Contains("scorch", StringComparer.InvariantCultureIgnoreCase))
+            {
+                bool tweetsLeft = true;
+                while (tweetsLeft)
+                {
+                    // Get user's tweets
+                    var tweetsResponse = UserTimeline();
+                    var tweets = tweetsResponse.Data.ToObject<List<dynamic>>();
+
+                    if (tweets.Count <= 0)
+                    {
+                        tweetsLeft = false;
+                    }
+
+                    // Keep using the same cached list of tweets to save API requests
+                    foreach (var tweet in tweets)
+                    {
+                        var deleteResponse = Delete(tweet.id_str.Value);
+                        if (deleteResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                        {
+                            logger.Info("Deleted Twitter status: {0}", tweet.id_str);
+                        }
+                        else if ((int)deleteResponse.StatusCode == 429) // "too many requests"
+                        {
+                            var rateLimitResetHeader = tweetsResponse.Headers.Single(t => t.Name.Equals("x-rate-limit-reset", StringComparison.InvariantCultureIgnoreCase));
+                            var rateLimitReset = DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(rateLimitResetHeader.Value)).DateTime;
+                            var difference = rateLimitReset.Subtract(DateTime.Now);
+                            logger.Warn("Rate limited by Twitter for {0} seconds", Math.Round(difference.TotalSeconds));
+                            Thread.Sleep(difference);
+                        }
+                        else
+                        {
+                            logger.Error("Unexpected response to Twitter delete: {0}", deleteResponse.ResponseStatus);
+                        }
+                    }
+                }
+            }
+
             if (actions.Contains("post", StringComparer.InvariantCultureIgnoreCase))
             {
                 var postResponse = Post(Options.PostStatus);
