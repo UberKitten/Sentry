@@ -1,13 +1,6 @@
 {
   "LoopDelay": 600,
   "Cooldown": 864000,
-  "EnableMultiFactorRequests": true,
-  "Quorum": {
-    "Enabled": false,
-    "CheckDelayMultiplier": 1.25,
-    "QuorumJitterLowerBound": 30,
-    "QuorumJitterUpperBound": 60
-  },
   "Triggers": [
     {
       "TriggerCriteria": {
@@ -39,8 +32,7 @@
             "update"
           ]
         }
-      ],
-      "NotifyServices": null
+      ]
     }
   ],
   "Services": [
