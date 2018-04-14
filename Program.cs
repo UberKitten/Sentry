@@ -117,7 +117,9 @@ namespace Sentry
             var notifyServiceTypes = GetSubTypes(typeof(BaseNotifyService));
             logger.Debug("Loaded {0} notify service types", notifyServiceTypes.Count);
 
-            foreach (var notifyServiceConfig in config.NotifyServices)
+            if (config.NotifyServices != null)
+            {
+                foreach (var notifyServiceConfig in config.NotifyServices)
             {
                 var notifyServiceType = notifyServiceTypes.SingleOrDefault(t => t.Name.Equals(notifyServiceConfig.Type, StringComparison.InvariantCultureIgnoreCase));
 
@@ -154,6 +156,7 @@ namespace Sentry
                     {
                         logger.Error(ex, "Error while loading notify service {0}, skipping", notifyServiceConfig.Type);
                     }
+                }
                 }
             }
 
@@ -407,6 +410,12 @@ namespace Sentry
                     var i = 0;
                     foreach (var trigger in config.Triggers)
                     {
+                        // If omitted
+                        if (trigger.Check == null)
+                        {
+                            continue;
+                        }
+
                         // We don't assign an ID to Triggers, because it's not really necessary so the index in config.Triggers is the de facto ID
                         logger.Debug("Starting check for trigger index {0}", i);
                         
@@ -461,7 +470,14 @@ namespace Sentry
                                 else
                                 {
                                     logger.Trace("Located ServiceOptions nested type {0} for service {1}", serviceTriggerCriteriaType.FullName, serviceToCheck.GetType().FullName);
-                                    triggerCriteria = ((JObject)trigger.TriggerCriteria).ToObject(serviceTriggerCriteriaType);
+                                    if (trigger.TriggerCriteria == null)
+                                    {
+                                        logger.Trace("TriggerCriteria is null for trigger {0}", i);
+                                    }
+                                    else
+                                    {
+                                        triggerCriteria = ((JObject)trigger.TriggerCriteria).ToObject(serviceTriggerCriteriaType);
+                                    }
                                 }
 
                                 if (serviceToCheck.Check(triggerCriteria))
@@ -600,7 +616,7 @@ namespace Sentry
             // https://stackoverflow.com/a/6944605
             var subTypes = new List<Type>();
             foreach (Type type in Assembly.GetAssembly(baseType).GetTypes()
-                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(t)))
+                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(baseType)))
             {
                 logger.Trace("Found sub type {0}", type.FullName);
                 subTypes.Add(type);
