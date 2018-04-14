@@ -56,13 +56,10 @@ namespace Sentry.Config
                         {
                             TweetContains = new List<string>()
                             {
-                                "pen",
-                                "pineapple",
-                                "apple",
-                                "pen"
+                                "Wing Attack Plan R"
                             },
                             RetweetsOver = 10000,
-                            FavoritesOver = 100
+                            FavoritesOver = 1000
                         },
                         Check = new List<string>
                         {
@@ -83,8 +80,15 @@ namespace Sentry.Config
                                 Id = "sinfultwitter",
                                 Actions = new List<string>
                                 {
-                                    "scorch",
-                                    "delete"
+                                    "scorch"
+                                }
+                            },
+                            new TriggerAction
+                            {
+                                Id = "mywebsite",
+                                Actions = new List<string>
+                                {
+                                    "update"
                                 }
                             }
                         }
@@ -96,24 +100,48 @@ namespace Sentry.Config
                     {
                         Id = "publictwitter",
                         Type = "twitterapi",
-                        Options = new Dictionary<string, string>
+                        Options = new Services.TwitterApi.ServiceOptions
                         {
-                            ["ConsumerKey"] = "example",
-                            ["ConsumerSecret"] = "example",
-                            ["Token"] = "example",
-                            ["TokenSecret"] = "example",
+                            ConsumerKey = "example",
+                            ConsumerSecret = "example",
+                            Token = "example",
+                            TokenSecret = "example",
                         }
                     },
                     new ServiceConfig
                     {
                         Id = "sinfultwitter",
-                        Type = "twitterapi",
-                        Options = new Dictionary<string, string>
+                        Type = "twitterweb",
+                        Options = new Services.TwitterWeb.ServiceOptions
                         {
-                            ["ConsumerKey"] = "example",
-                            ["ConsumerSecret"] = "example",
-                            ["Token"] = "example",
-                            ["TokenSecret"] = "example",
+                            Username = "mybadaccount",
+                            Password = "example"
+                        }
+                    },
+                    new ServiceConfig
+                    {
+                        Id = "mywebsite",
+                        Type = "cloudflare",
+                        Options = new Services.CloudflareApi.ServiceOptions
+                        {
+                            Email = "example@example.com",
+                            ApiKey = "example",
+                            ZoneIds = new List<string>
+                            {
+                                "1234"
+                            },
+                            RecordRegexes = new List<string>
+                            {
+                                "A test",
+                                @"SRV \S* test record please ignore"
+                            },
+                            UpdateValues = new Dictionary<string, string>
+                            {
+                                {"A", "127.0.0.1" },
+                                {"AAAA", "::1" },
+                                {"CNAME", "example.com" },
+                                {"TXT", "example" }
+                            }
                         }
                     }
                 },
@@ -169,7 +197,6 @@ namespace Sentry.Config
         public object TriggerCriteria { get; set; }
         public List<string> Check { get; set; }
         public List<TriggerAction> Services { get; set; }
-        public List<NotifyServiceConfig> NotifyServices { get; set; }
     }
     
     class TriggerAction

@@ -12,13 +12,10 @@
     {
       "TriggerCriteria": {
         "TweetContains": [
-          "pen",
-          "pineapple",
-          "apple",
-          "pen"
+          "Wing Attack Plan R"
         ],
         "RetweetsOver": 10000,
-        "FavoritesOver": 100
+        "FavoritesOver": 1000
       },
       "Check": [
         "publictwitter"
@@ -33,8 +30,13 @@
         {
           "Id": "sinfultwitter",
           "Actions": [
-            "scorch",
-            "delete"
+            "scorch"
+          ]
+        },
+        {
+          "Id": "mywebsite",
+          "Actions": [
+            "update"
           ]
         }
       ],
@@ -50,18 +52,39 @@
         "ConsumerKey": "example",
         "ConsumerSecret": "example",
         "Token": "example",
-        "TokenSecret": "example"
+        "TokenSecret": "example",
+        "PostStatus": null
       }
     },
     {
-      "Type": "twitterapi",
+      "Type": "twitterweb",
       "Id": "sinfultwitter",
       "CheckQuorum": true,
       "Options": {
-        "ConsumerKey": "example",
-        "ConsumerSecret": "example",
-        "Token": "example",
-        "TokenSecret": "example"
+        "Username": "mybadaccount",
+        "Password": "example"
+      }
+    },
+    {
+      "Type": "cloudflare",
+      "Id": "mywebsite",
+      "CheckQuorum": true,
+      "Options": {
+        "Email": "example@example.com",
+        "ApiKey": "example",
+        "ZoneIds": [
+          "1234"
+        ],
+        "RecordRegexes": [
+          "A test",
+          "SRV \\S* test record please ignore"
+        ],
+        "UpdateValues": {
+          "A": "127.0.0.1",
+          "AAAA": "::1",
+          "CNAME": "example.com",
+          "TXT": "example"
+        }
       }
     }
   ],
