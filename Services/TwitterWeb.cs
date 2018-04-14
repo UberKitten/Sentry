@@ -10,7 +10,7 @@ namespace Sentry.Services
 {
     class TwitterWeb : BaseService
     {
-        protected class ServiceOptions
+        public class ServiceOptions
         {
             public string Username { get; set; }
             public string Password { get; set; }
