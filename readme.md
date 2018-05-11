@@ -1,9 +1,7 @@
 Sentry
 ======
 
-Sentry will be/is/has been released at [BSides Rochester](https://www.bsidesroc.com/schedule/) on April 14th!
-
-Sentry will also be featured at [BSides Denver](https://www.bsidesden.org/) on May 11/12.
+Sentry was featured at [BSides Rochester 2018](https://www.bsidesroc.com/schedule/) and [BSides Denver 2018](https://www.bsidesden.org/).
 
 Feel free to contact [@t3hub3rk1tten](https://twitter.com/t3hub3rk1tten) for help or to send feedback. Please open bug reports in [Github issues](https://github.com/T3hUb3rK1tten/Sentry/issues). Pull requests are also welcome!
 
@@ -54,7 +52,7 @@ Clustering support
 
 Building
 --------
-**At this stage in development, I recommend only using Sentry if you have a bit of programming experience to identify issues.**
+**At this stage in development, I recommend only using Sentry if you have a bit of programming experience to troubleshoot issues.**
 
 To build the project, you can use the free [Visual Studio Community edition](https://www.visualstudio.com/vs/community/). Make sure you specify running C# apps so it installs the right libraries.
 
