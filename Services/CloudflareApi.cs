@@ -28,12 +28,12 @@ namespace Sentry.Services
 
         protected RestClient client = new RestClient("http://api.cloudflare.com/client/");
         
-        public CloudflareApi(string id, object ServiceOptions) : base(id)
+        public CloudflareApi(SecretsStoreManager secretsStoreManager, string id, object ServiceOptions) : base(secretsStoreManager, id)
         {
             Options = (ServiceOptions)ServiceOptions;
 
-            client.AddDefaultHeader("X-Auth-Email", Options.Email);
-            client.AddDefaultHeader("X-Auth-Key", Options.ApiKey);
+            client.AddDefaultHeader("X-Auth-Email", secretsStoreManager.TryGetSecret(Options.Email));
+            client.AddDefaultHeader("X-Auth-Key", secretsStoreManager.TryGetSecret(Options.ApiKey));
             client.AddDefaultHeader("Content-Type", "application/json; charset=utf-8");
             client.AddHandler("application/json", new DynamicJsonDeserializer());
         }

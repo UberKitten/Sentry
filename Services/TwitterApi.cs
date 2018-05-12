@@ -30,11 +30,16 @@ namespace Sentry.Services
         protected RestClient client = new RestClient("https://api.twitter.com/");
         protected long user_id = -1;
 
-        public TwitterApi(string id, object ServiceOptions) : base(id)
+        public TwitterApi(SecretsStoreManager secretsStoreManager, string id, object ServiceOptions) : base(secretsStoreManager, id)
         {
             Options = (ServiceOptions)ServiceOptions;
 
-            client.Authenticator = OAuth1Authenticator.ForProtectedResource(Options.ConsumerKey, Options.ConsumerSecret, Options.Token, Options.TokenSecret);
+            client.Authenticator = OAuth1Authenticator.ForProtectedResource(
+                secretsStoreManager.TryGetSecret(Options.ConsumerKey),
+                secretsStoreManager.TryGetSecret(Options.ConsumerSecret),
+                secretsStoreManager.TryGetSecret(Options.Token),
+                secretsStoreManager.TryGetSecret(Options.TokenSecret)
+            );
             client.AddHandler("application/json", new DynamicJsonDeserializer());
         }
 

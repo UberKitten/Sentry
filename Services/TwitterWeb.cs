@@ -25,7 +25,7 @@ namespace Sentry.Services
 
         protected ChromeDriver driver;
 
-        public TwitterWeb(string id, object ServiceOptions) : base(id)
+        public TwitterWeb(SecretsStoreManager secretsStoreManager, string id, object ServiceOptions) : base(secretsStoreManager, id)
         {
             Options = (ServiceOptions)ServiceOptions;
 
@@ -65,11 +65,11 @@ namespace Sentry.Services
             }
             var username = driver.FindElementByClassName("js-username-field");
             username.Click();
-            username.SendKeys(Options.Username);
+            username.SendKeys(secretsStoreManager.TryGetSecret(Options.Username));
 
             var password = driver.FindElementByClassName("js-password-field");
             password.Click();
-            password.SendKeys(Options.Password);
+            password.SendKeys(secretsStoreManager.TryGetSecret(Options.Password));
 
             password.Submit();
         }
@@ -117,7 +117,7 @@ namespace Sentry.Services
                     // Password confirmation box
                     var confirmPassword = driver.FindElementById("auth_password");
                     confirmPassword.Click();
-                    confirmPassword.SendKeys(Options.Password);
+                    confirmPassword.SendKeys(secretsStoreManager.TryGetSecret(Options.Password));
                     confirmPassword.Submit();
 
                     logger.Info("Twitter account {0} locked",Options.Username);
@@ -136,7 +136,7 @@ namespace Sentry.Services
                 // Password confirmation box
                 var confirmPassword = driver.FindElementById("auth_password");
                 confirmPassword.Click();
-                confirmPassword.SendKeys(Options.Password);
+                confirmPassword.SendKeys(secretsStoreManager.TryGetSecret(Options.Password));
                 confirmPassword.Submit();
 
                 logger.Info("Twitter account {0} deactivated", Options.Username);

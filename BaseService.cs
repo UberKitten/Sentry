@@ -18,16 +18,18 @@ namespace Sentry
          */
 
         protected Logger logger;
-        
+        protected SecretsStoreManager secretsStoreManager;
+
         /**
          * Services should implement this constructor.
          * Ideally implement a sub-class called "ServiceOptions" and it will be casted here
-         */   
-        public BaseService(string id, object ServiceOptions) : this(id) { }
+         */
+        public BaseService(SecretsStoreManager secretsStoreManager, string id, object ServiceOptions) : this(secretsStoreManager, id) { }
 
-        protected BaseService(string id)
+        protected BaseService(SecretsStoreManager secretsStoreManager, string id)
         {
             this.logger = LogManager.GetLogger(id);
+            this.secretsStoreManager = secretsStoreManager;
         }
         
         /**

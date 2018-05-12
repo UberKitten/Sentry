@@ -43,7 +43,8 @@ namespace Sentry.Config
         public List<Trigger> Triggers { get; set; }
         public List<ServiceConfig> Services { get; set; }
         public List<NotifyServiceConfig> NotifyServices { get; set; }
-
+        public List<SecretsStoreConfig> SecretsStores { get; set; }
+ 
         public static Config GetExample()
         {
             return new Config
@@ -159,6 +160,19 @@ namespace Sentry.Config
                             User = "321"
                         }
                     }
+                },
+                SecretsStores = new List<SecretsStoreConfig>
+                {
+                    new SecretsStoreConfig
+                    {
+                        Id = "conjur-eval",
+                        Type = "conjur",
+                        Options = new Dictionary<string, string>
+                        {
+                            ["ApplianceUrl"] = "https://eval.conjur.org/",
+                            ["ApiKey"] = "123"
+                        }
+                    }
                 }
             };
         }
@@ -252,6 +266,21 @@ namespace Sentry.Config
 
         /**
          * This is based on the NotifyServiceOptions in the NotifyService.
+         */
+        public object Options { get; set; }
+    }
+    
+    class SecretsStoreConfig
+    {
+        // What service to use, e.g. Conjur, database, etc
+        [JsonRequired]
+        public string Type { get; set; }
+
+        // The replacement identifier used in service options
+        public string Id { get; set; }
+
+        /**
+         * This is based on the SecretsServiceOptions in the NotifyService.
          */
         public object Options { get; set; }
     }

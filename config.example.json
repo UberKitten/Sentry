@@ -94,5 +94,15 @@
         "Sound": null
       }
     }
+  ],
+  "SecretsStores": [
+    {
+      "Type": "conjur",
+      "Id": "conjur-eval",
+      "Options": {
+        "ApplianceUrl": "https://eval.conjur.org/",
+        "ApiKey": "123"
+      }
+    }
   ]
 }

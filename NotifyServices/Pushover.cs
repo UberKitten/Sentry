@@ -20,7 +20,7 @@ namespace Sentry.NotifyServices
 
         protected RestClient client = new RestClient("https://api.pushover.net/");
 
-        public Pushover(object NotifyServiceOptions) : base()
+        public Pushover(SecretsStoreManager secretsStoreManager, object NotifyServiceOptions) : base(secretsStoreManager)
         {
             Options = (NotifyServiceOptions)NotifyServiceOptions;
         }
@@ -28,8 +28,8 @@ namespace Sentry.NotifyServices
         protected void Notify(string message, string url)
         {
             var request = new RestRequest("/1/messages.json", Method.POST);
-            request.AddParameter("token", Options.Token);
-            request.AddParameter("user", Options.User);
+            request.AddParameter("token", secretsStoreManager.TryGetSecret(Options.Token));
+            request.AddParameter("user", secretsStoreManager.TryGetSecret(Options.User));
             request.AddParameter("message", message);
             request.AddParameter("title", "Sentry");
 

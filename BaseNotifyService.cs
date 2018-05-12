@@ -8,16 +8,18 @@ namespace Sentry
     abstract class BaseNotifyService
     {
         protected Logger logger;
+        protected SecretsStoreManager secretsStoreManager;
 
         /**
          * NotifyServices should implement this constructor.
          * Ideally implement a sub-class called "NotifyServiceOptions" and it will be casted here
          */
-        public BaseNotifyService(object NotifyServiceOptions) : this() { }
+        public BaseNotifyService(SecretsStoreManager secretsStoreManager, object NotifyServiceOptions) : this(secretsStoreManager) { }
         
-        protected BaseNotifyService()
+        protected BaseNotifyService(SecretsStoreManager secretsStoreManager)
         {
             this.logger = LogManager.GetLogger(this.GetType().Name);
+            this.secretsStoreManager = secretsStoreManager;
         }
 
         public virtual void NotifyStartup()

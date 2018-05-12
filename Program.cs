@@ -26,7 +26,9 @@ namespace Sentry
 
         protected Dictionary<string, BaseService> services = new Dictionary<string, BaseService>();
         protected List<Tuple<BaseNotifyService, NotifyServiceConfig>> notifyServices = new List<Tuple<BaseNotifyService, NotifyServiceConfig>>();
-        
+
+        protected SecretsStoreManager secretsStoreManager;
+
         static void Main(string[] args)
         {
             var program = new Program();
@@ -114,49 +116,98 @@ namespace Sentry
             config = GetConfig(options);
             logger.Info("Loaded {0} with {1} triggers and {2} services", options.ConfigFile, config.Triggers.Count, config.Services.Count);
             
+            // Secrets stores must be loaded before any services or notifyservices as they can use it in their options
+            var secretsStoreTypes = GetSubTypes(typeof(BaseSecretsStore));
+            logger.Debug("Loaded {0} secrets store types", secretsStoreTypes.Count);
+            
+            var secretsStores = new List<Tuple<BaseSecretsStore, SecretsStoreConfig>>();
+            if (config.SecretsStores != null)
+            {
+                foreach (var secretsStoreConfig in config.SecretsStores)
+                {
+                    var secretsStoreType = secretsStoreTypes.SingleOrDefault(t => t.Name.Equals(secretsStoreConfig.Type, StringComparison.InvariantCultureIgnoreCase));
+
+                    if (secretsStoreType == null)
+                    {
+                        logger.Error("Unable to find secrets store {0}, skipping", secretsStoreConfig.Type);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            logger.Debug("Adding secrets store {0}", secretsStoreType.FullName);
+
+                            // secretsStoreConfig.Options is a JObject, we need to convert it to the SecretsStoreOptions on the service
+                            // This is kind of dirty (see BaseService discussion) but it works
+                            var secretsStoreOptionsType = secretsStoreType.GetNestedType("SecretsStoreOptions", BindingFlags.Public | BindingFlags.NonPublic);
+
+                            if (secretsStoreOptionsType == null)
+                            {
+                                logger.Trace("Did not locate SecretsStoreOptions nested type for secrets store {0}", secretsStoreOptionsType.FullName);
+                                secretsStoreConfig.Options = null;
+                            }
+                            else
+                            {
+                                logger.Trace("Located SecretsStoreOptions nested type {0} for secrets store {1}", secretsStoreOptionsType.FullName, secretsStoreOptionsType.FullName);
+                                secretsStoreConfig.Options = ((JObject)secretsStoreConfig.Options).ToObject(secretsStoreOptionsType);
+                            }
+
+                            var secretsStore = (BaseSecretsStore)Activator.CreateInstance(secretsStoreType, secretsStoreConfig.Options);
+                            secretsStores.Add(new Tuple<BaseSecretsStore, SecretsStoreConfig>(secretsStore, secretsStoreConfig));
+                            logger.Info("Loaded secrets store {0}", secretsStoreConfig.Type);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, "Error while loading secrets store {0}, skipping", secretsStoreConfig.Type);
+                        }
+                    }
+                }
+            }
+            secretsStoreManager = new SecretsStoreManager(secretsStores);
+
             var notifyServiceTypes = GetSubTypes(typeof(BaseNotifyService));
             logger.Debug("Loaded {0} notify service types", notifyServiceTypes.Count);
 
             if (config.NotifyServices != null)
             {
                 foreach (var notifyServiceConfig in config.NotifyServices)
-            {
-                var notifyServiceType = notifyServiceTypes.SingleOrDefault(t => t.Name.Equals(notifyServiceConfig.Type, StringComparison.InvariantCultureIgnoreCase));
-
-                if (notifyServiceType == null)
                 {
-                    logger.Error("Unable to find notify service {0}, skipping", notifyServiceConfig.Type);
-                }
-                else
-                {
-                    try
+                    var notifyServiceType = notifyServiceTypes.SingleOrDefault(t => t.Name.Equals(notifyServiceConfig.Type, StringComparison.InvariantCultureIgnoreCase));
+
+                    if (notifyServiceType == null)
                     {
-                        logger.Debug("Adding notify service {0}", notifyServiceType.FullName);
-
-                        // notifyServiceConfig.Options is a JObject, we need to convert it to the ServiceOptions on the service
-                        // This is kind of dirty (see BaseService discussion) but it works
-                        var notifyServiceOptionsType = notifyServiceType.GetNestedType("NotifyServiceOptions", BindingFlags.Public | BindingFlags.NonPublic);
-
-                        if (notifyServiceOptionsType == null)
-                        {
-                            logger.Trace("Did not locate NotifyServiceOptions nested type for notify service {0}", notifyServiceType.FullName);
-                            notifyServiceConfig.Options = null;
-                        }
-                        else
-                        {
-                            logger.Trace("Located ServiceOptions nested type {0} for notify service {1}", notifyServiceOptionsType.FullName, notifyServiceType.FullName);
-                            notifyServiceConfig.Options = ((JObject)notifyServiceConfig.Options).ToObject(notifyServiceOptionsType);
-                        }
-
-                        var notifyService = (BaseNotifyService)Activator.CreateInstance(notifyServiceType, notifyServiceConfig.Options);
-                        notifyServices.Add(new Tuple<BaseNotifyService, NotifyServiceConfig>(notifyService, notifyServiceConfig));
-                        logger.Info("Loaded notify service {0}", notifyServiceConfig.Type);
+                        logger.Error("Unable to find notify service {0}, skipping", notifyServiceConfig.Type);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        logger.Error(ex, "Error while loading notify service {0}, skipping", notifyServiceConfig.Type);
+                        try
+                        {
+                            logger.Debug("Adding notify service {0}", notifyServiceType.FullName);
+
+                            // notifyServiceConfig.Options is a JObject, we need to convert it to the ServiceOptions on the service
+                            // This is kind of dirty (see BaseService discussion) but it works
+                            var notifyServiceOptionsType = notifyServiceType.GetNestedType("NotifyServiceOptions", BindingFlags.Public | BindingFlags.NonPublic);
+
+                            if (notifyServiceOptionsType == null)
+                            {
+                                logger.Trace("Did not locate NotifyServiceOptions nested type for notify service {0}", notifyServiceType.FullName);
+                                notifyServiceConfig.Options = null;
+                            }
+                            else
+                            {
+                                logger.Trace("Located ServiceOptions nested type {0} for notify service {1}", notifyServiceOptionsType.FullName, notifyServiceType.FullName);
+                                notifyServiceConfig.Options = ((JObject)notifyServiceConfig.Options).ToObject(notifyServiceOptionsType);
+                            }
+
+                            var notifyService = (BaseNotifyService)Activator.CreateInstance(notifyServiceType, secretsStoreManager, notifyServiceConfig.Options);
+                            notifyServices.Add(new Tuple<BaseNotifyService, NotifyServiceConfig>(notifyService, notifyServiceConfig));
+                            logger.Info("Loaded notify service {0}", notifyServiceConfig.Type);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, "Error while loading notify service {0}, skipping", notifyServiceConfig.Type);
+                        }
                     }
-                }
                 }
             }
 
@@ -172,12 +223,13 @@ namespace Sentry
                     logger.Error(ex, "Error while trying to notify startup for notify service {0}", notifyService.Item2.Type);
                 }
             }
-            
+
+
             // Start up web server for multi-factor requests
             //if (config.EnableMultiFactorRequests)
             //{
 #if DEBUG
-                webServer = new SentryWebServer(options.MfaBindUrl);
+            webServer = new SentryWebServer(options.MfaBindUrl);
                 webServer.Start();
                 logger.Info("Started web server bound to {0}", options.MfaBindUrl);
 #endif
@@ -215,7 +267,7 @@ namespace Sentry
                             serviceConfig.Options = ((JObject)serviceConfig.Options).ToObject(serviceOptionsType);
                         }
 
-                        var service = (BaseService)Activator.CreateInstance(serviceType, serviceConfig.Id, serviceConfig.Options);
+                        var service = (BaseService)Activator.CreateInstance(serviceType, secretsStoreManager, serviceConfig.Id, serviceConfig.Options);
                         services.Add(serviceConfig.Id.ToLowerInvariant(), service);
                         logger.Info("Loaded service {0}", serviceConfig.Id);
                     }
