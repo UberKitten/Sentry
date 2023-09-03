@@ -3,8 +3,6 @@ Sentry
 
 Sentry was featured at [BSides Rochester 2018](https://www.bsidesroc.com/schedule/) and [BSides Denver 2018](https://www.bsidesden.org/).
 
-Feel free to contact [@t3hub3rk1tten](https://twitter.com/t3hub3rk1tten) for help or to send feedback. Please open bug reports in [Github issues](https://github.com/T3hUb3rK1tten/Sentry/issues). Pull requests are also welcome!
-
 Abstract
 --------
 With social media, anyone can become "incidentally infamous" in minutes. Your tweet could go viral, your gif could get posted by a president, or the media could single you out because they think you made Bitcoin. This happens to hackers too, @MalwareTechBlog was arrested after DEF CON 2017 and certain media started doxing him and painting him as a spendthrift criminal based on his Twitter posts. Rather than become a social media hermit to prevent this, just set up a Sentry. This talk will present Sentry, an automated cross-platform application that will silently watch your social media for trigger words and unusual behaviors before springing into action. In minutes Sentry can lock your Twitter account, delete your Reddit comments, disable your websites, and a whole host of other actions to keep attention away in high visibility, low-privacy situations. Released under the MIT license and easily extensible, virtually any site and any API can be scripted with a bit of C#.
